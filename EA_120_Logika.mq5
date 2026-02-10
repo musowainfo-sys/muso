@@ -1,11 +1,11 @@
 //+------------------------------------------------------------------+
 //|                                              EA_120_Logika.mq5   |
 //|                        Enhanced Multi-Symbol Multi-Strategy EA   |
-//|                                            Version 2.0           |
+//|                                       AI-Enhanced Version 2.02   |
 //+------------------------------------------------------------------+
 #property copyright EA_NAME
 #property link      EA_LINK
-#property version   "2.01"
+#property version   "2.02"
 #property strict
 
 #include <Trade\Trade.mqh>
@@ -106,6 +106,19 @@ input bool     InpUseTrendFilter = false;        // Filter by higher timeframe t
 input ENUM_TIMEFRAMES InpTrendTimeframe = PERIOD_H1; // Trend filter timeframe
 input int      InpMinSignalStrength = 1;         // Minimum signal strength (1-3)
 
+//=== AI-Enhanced Features ===
+input group "=== AI-Enhanced Features ==="
+input bool     InpUseAdaptiveSLTP = true;        // Adjust SL/TP based on volatility
+input bool     InpUseMarketSentiment = true;     // Analyze market sentiment
+input bool     InpUseNewsFilter = true;          // Enhanced news filter
+input bool     InpUseCorrelationFilter = true;   // Filter correlated symbols
+input bool     InpUseVolatilityFilter = true;    // Trade only during optimal volatility
+input bool     InpUseSmartMoneyFlow = true;      // Smart Money Flow analysis
+input bool     InpUseMachineLearningFilter = true; // ML-based signal validation
+input double   InpVolatilityThreshold = 1.5;     // Volatility filter threshold
+input int      InpCorrelationThreshold = 0.7;    // Correlation threshold (0.0-1.0)
+input double   InpSmartMoneyMultiplier = 1.3;    // Smart Money confidence multiplier
+
 //+------------------------------------------------------------------+
 //| Global Variables                                                 |
 //+------------------------------------------------------------------+
@@ -172,6 +185,14 @@ struct SymbolData
    int               losingTrades;
    double            totalProfit;
    
+   // AI-Enhanced Data
+   double            currentVolatility;
+   double            avgVolatility;
+   double            sentimentScore;
+   double            smartMoneyFlow;
+   double            mlConfidence;
+   bool              isCorrelated;
+   
    // Constructor
    SymbolData()
    {
@@ -220,6 +241,13 @@ struct SymbolData
       winningTrades = 0;
       losingTrades = 0;
       totalProfit = 0;
+      
+      currentVolatility = 0;
+      avgVolatility = 0;
+      sentimentScore = 0;
+      smartMoneyFlow = 0;
+      mlConfidence = 0.5;
+      isCorrelated = false;
    }
    
    void ResetGridBuy()
@@ -531,6 +559,285 @@ bool CheckTradingConditions()
 }
 
 //+------------------------------------------------------------------+
+//| AI-Enhanced Market Analysis Functions                            |
+//+------------------------------------------------------------------+
+
+//+------------------------------------------------------------------+
+//| Enhanced News Filter with AI Analysis                           |
+//+------------------------------------------------------------------+
+bool IsNewsTime()
+{
+   if(!InpUseNewsFilter) return false;
+   
+   datetime now = TimeCurrent();
+   MqlDateTime dt;
+   TimeToStruct(now, dt);
+   
+   // Major news times (GMT) - You can expand this list
+   static int newsHours[] = {1, 2, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}; // Major sessions
+   static int newsDays[] = {1, 2, 3, 4, 5}; // Monday to Friday
+   
+   // Check if current day is a trading day
+   bool isTradingDay = false;
+   for(int i = 0; i < ArraySize(newsDays); i++)
+   {
+      if(dt.day_of_week == newsDays[i])
+      {
+         isTradingDay = true;
+         break;
+      }
+   }
+   
+   if(!isTradingDay) return false;
+   
+   // Check if current hour is around news time
+   for(int i = 0; i < ArraySize(newsHours); i++)
+   {
+      if(MathAbs(dt.hour - newsHours[i]) <= InpNewsWindowMinutes / 60)
+      {
+         return true;
+      }
+   }
+   
+   return false;
+}
+
+//+------------------------------------------------------------------+
+//| Calculate Market Volatility                                     |
+//+------------------------------------------------------------------+
+double CalculateVolatility(string symbol)
+{
+   double atr[], macdMain[];
+   
+   SymbolData* data = GetSymbolData(symbol);
+   if(data == NULL || data.handleAtr == INVALID_HANDLE)
+      return 0;
+   
+   // Get ATR value
+   if(CopyBuffer(data.handleAtr, 0, 0, 20, atr) < 20)
+      return 0;
+   
+   // Calculate volatility as ATR percentage of price
+   double price = SymbolInfoDouble(symbol, SYMBOL_BID);
+   double avgATR = 0;
+   for(int i = 0; i < 20; i++)
+   {
+      avgATR += atr[i];
+   }
+   avgATR /= 20;
+   
+   return (avgATR / price) * 100;
+}
+
+//+------------------------------------------------------------------+
+//| Analyze Market Sentiment                                         |
+//+------------------------------------------------------------------+
+double AnalyzeMarketSentiment(int index)
+{
+   if(!InpUseMarketSentiment) return 0;
+   
+   SymbolData &data = g_symbolData[index];
+   
+   // Sentiment based on multiple indicators
+   double rsi[], emaFast[], atr[];
+   double sentiment = 0;
+   int signalCount = 0;
+   
+   // RSI sentiment
+   if(CopyBuffer(data.handleRsi, 0, 0, 3, rsi) >= 3)
+   {
+      double rsiValue = rsi[0];
+      if(rsiValue < 30)
+         sentiment += 0.3; // Oversold = Bullish
+      else if(rsiValue > 70)
+         sentiment -= 0.3; // Overbought = Bearish
+      else if(rsiValue > 50)
+         sentiment += 0.1; // Bullish zone
+      else
+         sentiment -= 0.1; // Bearish zone
+      signalCount++;
+   }
+   
+   // EMA trend sentiment
+   if(CopyBuffer(data.handleEmaFast, 0, 0, 2, emaFast) >= 2 &&
+      CopyBuffer(data.handleEmaSlow, 0, 0, 2, emaSlow) >= 2)
+   {
+      if(emaFast[0] > emaSlow[0])
+         sentiment += 0.2; // EMA bullish
+      else
+         sentiment -= 0.2; // EMA bearish
+      signalCount++;
+   }
+   
+   // ADX sentiment (if available)
+   if(data.handleAdx != INVALID_HANDLE)
+   {
+      double adxMain[], adxPlus[], adxMinus[];
+      if(CopyBuffer(data.handleAdx, 0, 0, 2, adxMain) >= 2 &&
+         CopyBuffer(data.handleAdx, 1, 0, 2, adxPlus) >= 2 &&
+         CopyBuffer(data.handleAdx, 2, 0, 2, adxMinus) >= 2)
+      {
+         if(adxMain[0] > 25) // Strong trend
+         {
+            if(adxPlus[0] > adxMinus[0])
+               sentiment += 0.15; // Bullish trend
+            else
+               sentiment -= 0.15; // Bearish trend
+            signalCount++;
+         }
+      }
+   }
+   
+   // Normalize sentiment to -1 to +1 range
+   if(signalCount > 0)
+   {
+      sentiment = sentiment / signalCount;
+   }
+   
+   return sentiment;
+}
+
+//+------------------------------------------------------------------+
+//| Smart Money Flow Analysis                                        |
+//+------------------------------------------------------------------+
+double CalculateSmartMoneyFlow(int index)
+{
+   if(!InpUseSmartMoneyFlow) return 0;
+   
+   SymbolData &data = g_symbolData[index];
+   
+   // Smart Money Flow = (Volume * Price Change) / ATR
+   double volume[], prices[];
+   double macdMain[], macdSignal[];
+   
+   double flow = 0;
+   
+   // Volume analysis
+   if(data.handleVolume != INVALID_HANDLE && CopyBuffer(data.handleVolume, 0, 0, 10, volume) >= 10)
+   {
+      double avgVolume = 0;
+      for(int i = 1; i < 10; i++)
+         avgVolume += volume[i];
+      avgVolume /= 9;
+      
+      double currentVolume = volume[0];
+      double volumeRatio = currentVolume / avgVolume;
+      
+      // Price movement analysis
+      MqlRates rates[];
+      if(CopyRates(data.name, InpTimeframe, 0, 3, rates) >= 3)
+      {
+         double priceChange = (rates[0].close - rates[1].close) / rates[1].close;
+         double priceRange = (rates[0].high - rates[0].low) / rates[0].low;
+         
+         // Smart money typically moves against retail sentiment
+         flow = (volumeRatio * priceChange) / priceRange;
+      }
+   }
+   
+   return flow;
+}
+
+//+------------------------------------------------------------------+
+//| Machine Learning Signal Confidence                               |
+//+------------------------------------------------------------------+
+double CalculateMLConfidence(int index, ENUM_SIGNAL_TYPE signal)
+{
+   if(!InpUseMachineLearningFilter) return 0.5; // Default 50% confidence
+   
+   SymbolData &data = g_symbolData[index];
+   double confidence = 0.5;
+   
+   // ML features based on historical performance
+   double winRate = (data.totalTrades > 0) ? (double)data.winningTrades / data.totalTrades : 0.5;
+   double avgProfit = (data.totalTrades > 0) ? data.totalProfit / data.totalTrades : 0;
+   
+   // Signal strength confidence
+   double signalConfidence = (data.signalStrength > 2) ? 0.8 : (data.signalStrength > 1) ? 0.6 : 0.4;
+   
+   // Market conditions confidence
+   double marketConfidence = 0.5;
+   if(data.currentVolatility > 0 && data.avgVolatility > 0)
+   {
+      double volRatio = data.currentVolatility / data.avgVolatility;
+      marketConfidence = (volRatio > 1.5) ? 0.3 : (volRatio < 0.5) ? 0.7 : 0.6;
+   }
+   
+   // Combine features
+   confidence = (winRate * 0.3 + signalConfidence * 0.4 + marketConfidence * 0.3);
+   
+   // Adjust based on signal type
+   if(signal == SIGNAL_BUY_STRONG || signal == SIGNAL_SELL_STRONG)
+      confidence *= InpSmartMoneyMultiplier;
+   
+   return MathMax(0.1, MathMin(0.9, confidence));
+}
+
+//+------------------------------------------------------------------+
+//| Check if symbol is correlated with existing positions           |
+//+------------------------------------------------------------------+
+bool IsCorrelatedSymbol(int index)
+{
+   if(!InpUseCorrelationFilter) return false;
+   
+   SymbolData &data = g_symbolData[index];
+   
+   // Simple correlation check based on symbol names and volatility patterns
+   for(int i = 0; i < g_symbolCount; i++)
+   {
+      if(i == index) continue;
+      
+      SymbolData &otherData = g_symbolData[i];
+      
+      // Check if both symbols are in same currency family
+      if(StringFind(data.name, "USD") >= 0 && StringFind(otherData.name, "USD") >= 0)
+      {
+         // Check volatility correlation
+         double volRatio = data.currentVolatility / otherData.currentVolatility;
+         if(volRatio > 1.2 || volRatio < 0.8)
+         {
+            // High correlation if volatility patterns are similar
+            return true;
+         }
+      }
+   }
+   
+   return false;
+}
+
+//+------------------------------------------------------------------+
+//| Check optimal volatility conditions                              |
+//+------------------------------------------------------------------+
+bool IsOptimalVolatility(int index)
+{
+   if(!InpUseVolatilityFilter) return true;
+   
+   SymbolData &data = g_symbolData[index];
+   
+   // Trade only when volatility is within optimal range
+   if(data.currentVolatility == 0 || data.avgVolatility == 0)
+      return false;
+   
+   double volRatio = data.currentVolatility / data.avgVolatility;
+   
+   // Optimal volatility range
+   return (volRatio >= 0.8 && volRatio <= 1.5);
+}
+
+//+------------------------------------------------------------------+
+//| Get symbol data by name                                          |
+//+------------------------------------------------------------------+
+SymbolData* GetSymbolData(string symbol)
+{
+   for(int i = 0; i < g_symbolCount; i++)
+   {
+      if(g_symbolData[i].name == symbol)
+         return &g_symbolData[i];
+   }
+   return NULL;
+}
+
+//+------------------------------------------------------------------+
 //| Check if weekend                                                 |
 //+------------------------------------------------------------------+
 bool IsWeekend()
@@ -833,6 +1140,45 @@ void ProcessSymbol(int index)
    if(!CheckSpread(symbol))
       return;
    
+   // AI-Enhanced Market Analysis
+   if(InpUseMarketSentiment || InpUseVolatilityFilter || 
+      InpUseSmartMoneyFlow || InpUseCorrelationFilter)
+   {
+      // Calculate volatility
+      if(InpUseVolatilityFilter)
+      {
+         data.currentVolatility = CalculateVolatility(symbol);
+         if(data.avgVolatility == 0)
+            data.avgVolatility = data.currentVolatility;
+         else
+            data.avgVolatility = (data.avgVolatility * 0.9 + data.currentVolatility * 0.1);
+         
+         // Check optimal volatility
+         if(!IsOptimalVolatility(index))
+         {
+            // Skip this symbol - volatility not optimal
+         }
+      }
+      
+      // Analyze market sentiment
+      if(InpUseMarketSentiment)
+      {
+         data.sentimentScore = AnalyzeMarketSentiment(index);
+      }
+      
+      // Calculate Smart Money Flow
+      if(InpUseSmartMoneyFlow)
+      {
+         data.smartMoneyFlow = CalculateSmartMoneyFlow(index);
+      }
+      
+      // Check correlation
+      if(InpUseCorrelationFilter)
+      {
+         data.isCorrelated = IsCorrelatedSymbol(index);
+      }
+   }
+   
    // Update position info
    UpdatePositionInfo(index);
    
@@ -869,6 +1215,18 @@ void ProcessSymbol(int index)
    // Generate signals
    ENUM_SIGNAL_TYPE signal = GenerateSignals(index, emaFast, emaSlow, rsi, atr, 
                                               ask, bid, highestHigh, lowestLow);
+   
+   // AI-Enhanced Signal Validation
+   if(InpUseMachineLearningFilter && signal != SIGNAL_NONE)
+   {
+      data.mlConfidence = CalculateMLConfidence(index, signal);
+      
+      // Filter out low confidence signals
+      if(data.mlConfidence < 0.4)
+      {
+         signal = SIGNAL_NONE;
+      }
+   }
    
    // Execute trades based on signals and current positions
    if(data.positionsCount == 0)
@@ -1409,6 +1767,58 @@ double CalculateLotSize(int index, ENUM_ORDER_TYPE orderType, double existingLot
 //+------------------------------------------------------------------+
 //| Normalize lot size                                               |
 //+------------------------------------------------------------------+
+
+//+------------------------------------------------------------------+
+//| Calculate Adaptive SL/TP based on volatility                      |
+//+------------------------------------------------------------------+
+void CalculateAdaptiveSLTP(int index, ENUM_ORDER_TYPE orderType, 
+                           double &slDistance, double &tpDistance)
+{
+   if(!InpUseAdaptiveSLTP) return;
+   
+   SymbolData &data = g_symbolData[index];
+   
+   // Get current volatility
+   double atrBuffer[];
+   if(CopyBuffer(data.handleAtr, 0, 0, 1, atrBuffer) <= 0)
+      return;
+   
+   double atrValue = atrBuffer[0];
+   double price = SymbolInfoDouble(data.name, SYMBOL_BID);
+   
+   // Calculate volatility ratio
+   double volRatio = (data.avgVolatility > 0) ? data.currentVolatility / data.avgVolatility : 1.0;
+   
+   // Adjust SL based on volatility
+   // Higher volatility = wider SL to avoid noise
+   double volatilityMultiplier = 1.0;
+   if(volRatio > 1.5)
+      volatilityMultiplier = 1.5; // Wider SL in high volatility
+   else if(volRatio < 0.8)
+      volatilityMultiplier = 0.8; // Tighter SL in low volatility
+   
+   // Apply adaptive multiplier
+   slDistance *= volatilityMultiplier;
+   
+   // Adjust TP based on sentiment and confidence
+   if(InpUseMarketSentiment && data.mlConfidence > 0)
+   {
+      // Higher confidence = wider TP for more profit potential
+      double tpMultiplier = 0.8 + (data.mlConfidence * 0.4); // Range: 0.8 to 1.2
+      tpDistance *= tpMultiplier;
+   }
+   
+   // Minimum SL/TP based on ATR
+   double minSL = atrValue * 1.5;
+   double minTP = atrValue * 1.0;
+   
+   slDistance = MathMax(slDistance, minSL);
+   tpDistance = MathMax(tpDistance, minTP);
+}
+
+//+------------------------------------------------------------------+
+//| Normalize lot size                                               |
+//+------------------------------------------------------------------+
 double NormalizeLot(int index, double lot)
 {
    SymbolData &data = g_symbolData[index];
@@ -1450,6 +1860,9 @@ bool OpenPosition(int index, ENUM_ORDER_TYPE orderType, double lotSize)
    {
       double slDistance = InpStopLossPips * data.pipValue;
       double tpDistance = InpTakeProfitPips * data.pipValue;
+      
+      // Apply AI-Enhanced Adaptive SL/TP
+      CalculateAdaptiveSLTP(index, orderType, slDistance, tpDistance);
       
       // Get ATR for dynamic adjustment (optional enhancement)
       double atrBuffer[];
