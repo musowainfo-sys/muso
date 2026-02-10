@@ -1,0 +1,36 @@
+# MQL5 Compiled Files
+*.ex5
+*.ex4
+
+# MetaEditor Logs
+*.log
+
+# MetaTrader Files
+*.hst
+*.fxt
+*.set
+*.tpl
+*.chr
+
+# Backtest Reports
+*.htm
+*.html
+tester/
+
+# MetaTrader Logs
+MQL5/Logs/
+MQL5/Files/
+
+# IDE and Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Temporary Files
+*.tmp
+*.bak
+*.old
