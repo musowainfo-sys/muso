@@ -2,24 +2,25 @@
 
 ## Overview
 
-**Version:** 2.01 (Aggressive)  
+**Version:** 2.02 (AI-Enhanced)  
 **Platform:** MetaTrader 5  
 **Language:** MQL5  
 
-EA_120_Logika is an advanced multi-symbol, multi-strategy Expert Advisor designed for 24/7 automated trading. This enhanced version includes sophisticated risk management, multiple trading sessions support, trailing stops, breakeven functionality, and comprehensive trade filtering mechanisms.
+EA_120_Logika is an advanced multi-symbol, multi-strategy Expert Advisor designed for 24/7 automated trading. This AI-enhanced version includes sophisticated market analysis, adaptive parameters, smart money flow detection, and machine learning-based signal validation.
 
 ## Table of Contents
 
 1. [Key Features](#key-features)
-2. [Strategy Components](#strategy-components)
-3. [Risk Management](#risk-management)
-4. [Multi-Symbol Trading](#multi-symbol-trading)
-5. [Configuration Parameters](#configuration-parameters)
-6. [Trading Logic Details](#trading-logic-details)
-7. [New in Version 2.01](#new-in-version-201)
-8. [Installation & Setup](#installation--setup)
-9. [Risk Warnings](#risk-warnings)
-10. [Performance Optimization](#performance-optimization)
+2. [AI-Enhanced Features](#ai-enhanced-features)
+3. [Strategy Components](#strategy-components)
+4. [Risk Management](#risk-management)
+5. [Multi-Symbol Trading](#multi-symbol-trading)
+6. [Configuration Parameters](#configuration-parameters)
+7. [Trading Logic Details](#trading-logic-details)
+8. [New in Version 2.02](#new-in-version-202)
+9. [Installation & Setup](#installation--setup)
+10. [Risk Warnings](#risk-warnings)
+11. [Performance Optimization](#performance-optimization)
 
 ---
 
@@ -37,8 +38,9 @@ EA_120_Logika is an advanced multi-symbol, multi-strategy Expert Advisor designe
 - ✅ **Kelly Criterion** - Advanced position sizing option
 - ✅ **Equity Recovery** - Martingale equity-based recovery system
 - ✅ **Comprehensive Statistics** - Per-symbol tracking and reporting
+- ✅ **AI-Enhanced Analysis** - Smart market analysis and adaptive trading
 
-### Aggressive Trading Parameters (v2.01 Default)
+### Aggressive Trading Parameters (v2.02 Default)
 | Parameter | Conservative | Aggressive (Default) |
 |-----------|--------------|---------------------|
 | Base Lot | 0.01 | 0.02 |
@@ -50,6 +52,107 @@ EA_120_Logika is an advanced multi-symbol, multi-strategy Expert Advisor designe
 | Max Grid Levels | 5 | 12 |
 | Martingale Factor | 1.3 | 1.7 |
 | Max Martingale Level | 3 | 7 |
+
+---
+
+## AI-Enhanced Features
+
+Version 2.02 introduces advanced AI-like capabilities to make trading decisions smarter and more adaptive:
+
+### 1. Adaptive SL/TP (Stop Loss / Take Profit)
+**Dynamic risk management based on market volatility**
+
+| Feature | Description |
+|---------|-------------|
+| Volatility Adjustment | SL/TP automatically adjusts based on current market volatility |
+| ATR-Based Minimum | Ensures SL/TP never goes below ATR-based minimums |
+| Smart Multiplier | Higher confidence signals get wider TP for more profit potential |
+
+**How it works:**
+- When volatility is HIGH (>1.5x average): Wider SL to avoid noise triggers
+- When volatility is LOW (<0.8x average): Tighter SL for better risk/reward
+- High ML confidence: Wider TP to capture more profit
+
+### 2. Market Sentiment Analysis
+**Multi-indicator sentiment scoring**
+
+| Indicator | Weight | Bullish Signal | Bearish Signal |
+|-----------|--------|----------------|----------------|
+| RSI | 30% | < 30 (oversold) | > 70 (overbought) |
+| EMA Trend | 20% | Fast > Slow | Fast < Slow |
+| ADX Trend | 15% | DI+ > DI- | DI- > DI+ |
+
+**Sentiment Score Range:** -1.0 (strongly bearish) to +1.0 (strongly bullish)
+
+### 3. Smart Money Flow Analysis
+**Detects institutional trading patterns**
+
+Smart Money Flow = (Volume Ratio × Price Change) / Price Range
+
+- High positive flow: Institutional buying detected
+- High negative flow: Institutional selling detected
+- Used to filter signals and boost confidence
+
+### 4. Machine Learning Signal Validation
+**Historical performance-based confidence scoring**
+
+**ML Confidence Formula:**
+```
+Confidence = (WinRate × 0.3) + (SignalStrength × 0.4) + (MarketConditions × 0.3)
+```
+
+**Features considered:**
+- Historical win rate per symbol
+- Average profit per trade
+- Current signal strength
+- Volatility regime
+- Trend alignment
+
+**Filtering:** Signals with confidence < 40% are rejected
+
+### 5. Volatility Filter
+**Trade only during optimal market conditions**
+
+| Volatility Ratio | Action |
+|------------------|--------|
+| < 0.5x | Skip - Too quiet |
+| 0.8x - 1.5x | Optimal - Trade allowed |
+| > 1.5x | Skip - Too volatile |
+
+### 6. Correlation Filter
+**Avoid over-exposure to correlated pairs**
+
+| Check | Method |
+|-------|--------|
+| Currency Family | Same base currency (e.g., USD pairs) |
+| Volatility Pattern | Similar volatility ratios |
+
+**Benefit:** Prevents over-trading correlated pairs, reducing risk concentration
+
+### 7. Enhanced News Filter
+**Smart news avoidance during high-impact periods**
+
+The system avoids trading during major economic events:
+- Major central bank announcements
+- NFP releases
+- Key economic indicators
+
+**Implementation:** Configurable news window (default: ±30 minutes from news events)
+
+### Configuration Parameters (AI Features)
+
+| Parameter | Default | Range | Description |
+|----------|---------|-------|-------------|
+| InpUseAdaptiveSLTP | true | true/false | Enable adaptive SL/TP |
+| InpUseMarketSentiment | true | true/false | Enable sentiment analysis |
+| InpUseNewsFilter | true | true/false | Enable news filter |
+| InpUseCorrelationFilter | true | true/false | Enable correlation check |
+| InpUseVolatilityFilter | true | true/false | Enable volatility filter |
+| InpUseSmartMoneyFlow | true | true/false | Enable smart money detection |
+| InpUseMachineLearningFilter | true | true/false | Enable ML signal validation |
+| InpVolatilityThreshold | 1.5 | 0.5-3.0 | Volatility multiplier threshold |
+| InpCorrelationThreshold | 0.7 | 0.0-1.0 | Correlation detection threshold |
+| InpSmartMoneyMultiplier | 1.3 | 0.5-2.0 | Strong signal confidence multiplier |
 
 ---
 
@@ -426,6 +529,82 @@ OnTick()
 1. Breakeven check
 2. Trailing stop adjustment
 3. Grid/martingale evaluation
+
+---
+
+## New in Version 2.02 (AI-Enhanced)
+
+### Major AI-Like Enhancements
+
+#### 1. **Adaptive SL/TP System**
+- Dynamic Stop Loss/Take Profit based on market volatility
+- ATR-based minimum SL/TP protection
+- Smart multiplier for high-confidence signals
+- Volatility-adjusted risk management (0.8x to 1.5x multiplier)
+
+#### 2. **Market Sentiment Analysis**
+- Multi-indicator sentiment scoring system
+- RSI oversold/overbought analysis (+/- 0.3 weight)
+- EMA trend confirmation (+/- 0.2 weight)
+- ADX trend strength filter (+/- 0.15 weight)
+- Normalized sentiment score: -1.0 to +1.0 range
+
+#### 3. **Smart Money Flow Detection**
+- Volume-based institutional trading pattern analysis
+- Smart Money Flow calculation: (Volume Ratio × Price Change) / Price Range
+- Institutional buying/selling detection
+- Signal confidence boosting based on flow analysis
+
+#### 4. **Machine Learning Signal Validation**
+- Historical performance-based confidence scoring
+- Win rate analysis per symbol
+- Signal strength confidence assessment
+- Market conditions evaluation
+- Automatic filtering of signals with confidence < 40%
+
+#### 5. **Enhanced Market Analysis**
+- **Volatility Filter**: Trade only during optimal volatility (0.8x - 1.5x average)
+- **Correlation Filter**: Avoid over-exposure to correlated pairs
+- **Enhanced News Filter**: Smart avoidance during high-impact events
+- **Real-time Volatility Tracking**: 20-period ATR analysis
+
+#### 6. **AI-Enhanced Parameters**
+- InpUseAdaptiveSLTP: Enable volatility-based SL/TP adjustment
+- InpUseMarketSentiment: Multi-indicator sentiment analysis
+- InpUseSmartMoneyFlow: Institutional flow detection
+- InpUseMachineLearningFilter: ML-based signal validation
+- InpVolatilityThreshold: 1.5x volatility multiplier threshold
+- InpCorrelationThreshold: 0.7 correlation detection threshold
+
+#### 7. **Performance Optimization**
+- SymbolData structure enhancement with AI metrics
+- Real-time sentiment and volatility tracking
+- Smart correlation detection across currency families
+- Enhanced logging for AI analysis results
+
+#### 8. **Risk Management Improvements**
+- Volatility-adjusted position sizing
+- Market condition-based signal filtering
+- Correlation-based exposure management
+- Sentiment-driven trade timing optimization
+
+### Technical Implementation
+
+#### New Functions Added:
+- `CalculateAdaptiveSLTP()` - Volatility-based SL/TP adjustment
+- `AnalyzeMarketSentiment()` - Multi-indicator sentiment analysis
+- `CalculateSmartMoneyFlow()` - Institutional flow detection
+- `CalculateMLConfidence()` - ML-based confidence scoring
+- `IsCorrelatedSymbol()` - Correlation analysis
+- `IsOptimalVolatility()` - Volatility condition check
+
+#### Enhanced Data Structures:
+- Added AI metrics to SymbolData structure
+- Real-time volatility tracking
+- Sentiment score storage
+- Smart money flow calculation
+- ML confidence scoring
+- Correlation flagging
 
 ---
 
