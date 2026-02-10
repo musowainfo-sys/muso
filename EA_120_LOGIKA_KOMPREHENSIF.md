@@ -2,7 +2,7 @@
 
 ## Overview
 
-**Version:** 2.0  
+**Version:** 2.01 (Aggressive)  
 **Platform:** MetaTrader 5  
 **Language:** MQL5  
 
@@ -16,7 +16,7 @@ EA_120_Logika is an advanced multi-symbol, multi-strategy Expert Advisor designe
 4. [Multi-Symbol Trading](#multi-symbol-trading)
 5. [Configuration Parameters](#configuration-parameters)
 6. [Trading Logic Details](#trading-logic-details)
-7. [New in Version 2.0](#new-in-version-20)
+7. [New in Version 2.01](#new-in-version-201)
 8. [Installation & Setup](#installation--setup)
 9. [Risk Warnings](#risk-warnings)
 10. [Performance Optimization](#performance-optimization)
@@ -28,14 +28,28 @@ EA_120_Logika is an advanced multi-symbol, multi-strategy Expert Advisor designe
 ### Core Capabilities
 - ✅ **Multi-Symbol Trading** - Trade single symbol or scan all available symbols
 - ✅ **Multi-Timeframe Support** - Configurable timeframe (default M6)
-- ✅ **Four Combined Strategies** - Scalping, Breakout, Grid, Martingale
-- ✅ **Advanced Risk Management** - Drawdown limits, daily loss limits, position caps
-- ✅ **Trade Management** - Trailing stops, breakeven, partial close options
-- ✅ **Session Filtering** - Trade specific sessions (Asian, London, New York)
-- ✅ **Time Filters** - Weekend avoidance, news hour filtering
+- ✅ **Four Combined Strategies** - Scalping, Breakout, Grid, Martingale (all enabled by default)
+- ✅ **Advanced Risk Management** - Drawdown limits (35%), daily loss limits (12%), position caps
+- ✅ **Trade Management** - Trailing stops, breakeven, grid trailing stop
+- ✅ **Session Filtering** - Trade specific sessions (Asian, London, New York) - all enabled
+- ✅ **Time Filters** - Weekend avoidance, news hour filtering (disabled by default for aggressive mode)
 - ✅ **Signal Quality** - Multi-level signal strength with trend confirmation
 - ✅ **Kelly Criterion** - Advanced position sizing option
+- ✅ **Equity Recovery** - Martingale equity-based recovery system
 - ✅ **Comprehensive Statistics** - Per-symbol tracking and reporting
+
+### Aggressive Trading Parameters (v2.01 Default)
+| Parameter | Conservative | Aggressive (Default) |
+|-----------|--------------|---------------------|
+| Base Lot | 0.01 | 0.02 |
+| Max Drawdown | 20% | 35% |
+| Daily Loss Limit | 5% | 12% |
+| Stop Loss | 60 pips | 40 pips |
+| Take Profit | 120 pips | 80 pips |
+| Grid Step | 40 pips | 25 pips |
+| Max Grid Levels | 5 | 12 |
+| Martingale Factor | 1.3 | 1.7 |
+| Max Martingale Level | 3 | 7 |
 
 ---
 
@@ -412,6 +426,61 @@ OnTick()
 1. Breakeven check
 2. Trailing stop adjustment
 3. Grid/martingale evaluation
+
+---
+
+## New in Version 2.01 (Aggressive Mode)
+
+### Major Enhancements
+
+#### 1. **Aggressive Multi-Strategy Combinations**
+- Combined EMA/RSI scalping + breakout strategy signals
+- Enhanced signal strength scoring (1-4+ for combined strategies)
+- Aggressive momentum continuation signals (RSI zones 40-65, 35-60)
+- Extreme RSI signals (RSI < 20, RSI > 80) for additional entries
+- Signal combination bonus: Both strategies agree = +2 strength
+
+#### 2. **Enhanced Grid & Martingale System**
+- Increased max grid levels from 10 to 12
+- Higher martingale factor: 1.7 (previously 1.5)
+- Extended max martingale level: 7 (previously 5)
+- Equity-based recovery system (new)
+- Grid trailing stop functionality (new)
+- Recovery grid levels when equity drawdown exceeds 1%
+
+#### 3. **Aggressive Risk Parameters (Default)**
+- Base lot increased: 0.02 (previously 0.01)
+- Max drawdown: 35% (previously 30%)
+- Daily loss limit: 12% (previously 10%)
+- Reduced SL/TP: 40/80 pips (previously 50/100)
+- Grid step: 25 pips (previously 30)
+- Minimum account balance: $50 (previously $100)
+- Max spread: 6 pips (previously 5)
+
+#### 4. **Enhanced Order Management**
+- ATR-based dynamic SL/TP adjustment
+- Order retry logic with brief pause
+- Enhanced strategy identification in order comments
+- Grid trailing stop management
+- Equity recovery grid entries
+
+#### 5. **Aggressive Trading Hours**
+- Session filtering disabled by default (trade 24/7)
+- News hour avoidance disabled by default
+- Friday position closing disabled by default
+- All trading sessions enabled (Asian/London/NY)
+
+#### 6. **Volume Confirmation**
+- Volume indicator creation for breakout confirmation
+- Average volume calculation for signal enhancement
+- Volume multiplier threshold (1.5x)
+
+#### 7. **Enhanced Error Handling & Logging**
+- Retry mechanism for failed order placement
+- Detailed grid level logging
+- Recovery level tracking
+- Strategy combination identification
+- Enhanced position tracking per symbol
 
 ---
 

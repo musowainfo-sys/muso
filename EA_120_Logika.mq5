@@ -5,7 +5,7 @@
 //+------------------------------------------------------------------+
 #property copyright EA_NAME
 #property link      EA_LINK
-#property version   EA_VERSION
+#property version   "2.01"
 #property strict
 
 #include <Trade\Trade.mqh>
@@ -27,19 +27,19 @@ input int      InpSlippage = 10;                 // Max slippage in points
 
 //=== Risk Management ===
 input group "=== Risk Management ==="
-input double   InpBaseLotSize = 0.01;            // Base lot size
+input double   InpBaseLotSize = 0.02;            // Base lot size (aggressive)
 input double   InpMaxLot = 10.0;                 // Maximum lot per order
 input int      InpMaxPositionsPerSymbol = 10;    // Max positions per symbol
 input int      InpTotalMaxPositions = 100;       // Max total positions (all symbols)
-input double   InpMaxDrawdownPct = 30.0;         // Max drawdown % (equity vs balance)
-input double   InpDailyLossLimitPct = 10.0;      // Daily loss limit %
-input double   InpMaxSpreadPips = 5.0;           // Max spread allowed (pips)
-input double   InpMinAccountBalance = 100.0;     // Minimum account balance to trade
+input double   InpMaxDrawdownPct = 35.0;         // Max drawdown % (aggressive)
+input double   InpDailyLossLimitPct = 12.0;      // Daily loss limit % (aggressive)
+input double   InpMaxSpreadPips = 6.0;           // Max spread allowed (pips)
+input double   InpMinAccountBalance = 50.0;      // Minimum account balance to trade
 
 input group "=== Stop Loss & Take Profit ==="
 input bool     InpUseFixedSLTP = true;           // Use fixed SL/TP (pips)
-input double   InpStopLossPips = 50;             // Stop Loss in pips
-input double   InpTakeProfitPips = 100;          // Take Profit in pips
+input double   InpStopLossPips = 40;             // Stop Loss in pips (aggressive)
+input double   InpTakeProfitPips = 80;          // Take Profit in pips (aggressive)
 input bool     InpUseTrailingStop = false;       // Enable trailing stop
 input double   InpTrailingStartPips = 50;        // Trailing start (pips)
 input double   InpTrailingStepPips = 20;         // Trailing step (pips)
@@ -47,8 +47,8 @@ input bool     InpUseBreakEven = false;          // Enable breakeven
 input double   InpBreakEvenPips = 30;            // Breakeven trigger (pips)
 
 input group "=== Money Management ==="
-input bool     InpUseRiskPercent = false;        // Use risk % per trade
-input double   InpRiskPercent = 1.0;             // Risk % per trade
+input bool     InpUseRiskPercent = true;         // Use risk % per trade (aggressive)
+input double   InpRiskPercent = 2.0;             // Risk % per trade (aggressive)
 input bool     InpUseKellyCriterion = false;     // Use Kelly criterion sizing
 
 //=== Scalping Strategy ===
@@ -75,30 +75,30 @@ input double   InpVolumeMultiplier = 1.5;        // Volume multiplier threshold
 //=== Grid & Martingale ===
 input group "=== Grid Trading ==="
 input bool     InpUseGrid = true;                // Enable grid trading
-input double   InpGridStepPips = 30;             // Grid step in pips
-input int      InpMaxGridLevels = 10;            // Max grid levels
-input bool     InpGridTrailingStop = false;      // Use trailing stop on grid
+input double   InpGridStepPips = 25;             // Grid step in pips (aggressive)
+input int      InpMaxGridLevels = 12;            // Max grid levels (more aggressive)
+input bool     InpGridTrailingStop = true;       // Use trailing stop on grid (new)
 
 input group "=== Martingale System ==="
 input bool     InpUseMartingale = true;          // Enable martingale
-input double   InpMartingaleFactor = 1.5;        // Lot multiplier
-input int      InpMaxMartingaleLevel = 5;        // Max martingale levels
+input double   InpMartingaleFactor = 1.7;        // Lot multiplier (more aggressive)
+input int      InpMaxMartingaleLevel = 7;        // Max martingale levels (more aggressive)
 input bool     InpResetMartingaleOnProfit = true; // Reset after profitable close
-input bool     InpMartingaleUseEquityRecovery = false; // Use equity-based recovery
+input bool     InpMartingaleUseEquityRecovery = true; // Use equity-based recovery (new)
 
 //=== Trading Hours & Filters ===
 input group "=== Trading Sessions ==="
-input bool     InpFilterBySession = false;       // Filter by trading session
+input bool     InpFilterBySession = false;       // Filter by trading session (disabled for aggressive)
 input ENUM_TRADING_SESSION InpTradeSession = SESSION_ALL; // Trading session
 input bool     InpTradeAsian = true;             // Trade Asian session
 input bool     InpTradeLondon = true;            // Trade London session
 input bool     InpTradeNewYork = true;           // Trade New York session
 
 input group "=== Time Filters ==="
-input bool     InpAvoidNewsHours = false;        // Avoid high-impact news hours
+input bool     InpAvoidNewsHours = false;        // Avoid high-impact news hours (disabled for aggressive)
 input int      InpNewsWindowMinutes = 30;        // News window (minutes before/after)
 input bool     InpAvoidWeekend = true;           // Avoid trading on weekends
-input bool     InpFridayClosePositions = false;  // Close positions Friday evening
+input bool     InpFridayClosePositions = false;  // Close positions Friday evening (disabled for aggressive)
 input int      InpFridayCloseHour = 20;          // Friday close hour (server time)
 
 input group "=== Signal Filters ==="
@@ -777,17 +777,25 @@ bool CreateIndicators(int index)
    g_symbolData[index].handleRsi = iRSI(symbol, tf, InpRSIPeriod, PRICE_CLOSE);
    g_symbolData[index].handleAtr = iATR(symbol, tf, 14);
    
+   // ADX filter
    if(InpUseADXFilter)
    {
       g_symbolData[index].handleAdx = iADX(symbol, tf, InpADXPeriod);
    }
    
-   // Validate handles
+   // Volume indicator (if volume confirmation is enabled)
+   if(InpUseVolumeConfirmation)
+   {
+      g_symbolData[index].handleVolume = iVolumes(symbol, tf, VOLUME_TICK);
+   }
+   
+   // Validate critical handles
    if(g_symbolData[index].handleEmaFast == INVALID_HANDLE ||
       g_symbolData[index].handleEmaSlow == INVALID_HANDLE ||
       g_symbolData[index].handleRsi == INVALID_HANDLE ||
       g_symbolData[index].handleAtr == INVALID_HANDLE)
    {
+      Print("ERROR: Failed to create essential indicators for ", symbol);
       return false;
    }
    
@@ -1083,7 +1091,7 @@ void CheckMartingaleReset(int index)
 }
 
 //+------------------------------------------------------------------+
-//| Generate trading signals                                         |
+//| Generate trading signals - Combined aggressive multi-strategy      |
 //+------------------------------------------------------------------+
 ENUM_SIGNAL_TYPE GenerateSignals(int index, double &emaFast[], double &emaSlow[], 
                                   double &rsi[], double &atr[], 
@@ -1099,10 +1107,9 @@ ENUM_SIGNAL_TYPE GenerateSignals(int index, double &emaFast[], double &emaSlow[]
    int buyStrength = 0;
    int sellStrength = 0;
    
-   // Scalping signals
+   // === SCALPING STRATEGY (EMA/RSI) ===
    if(InpUseScalping)
    {
-      // EMA crossover with RSI confirmation
       bool emaBullish = emaFast[0] > emaSlow[0];
       bool emaBearish = emaFast[0] < emaSlow[0];
       bool emaCrossUp = emaFast[1] <= emaSlow[1] && emaFast[0] > emaSlow[0];
@@ -1110,36 +1117,50 @@ ENUM_SIGNAL_TYPE GenerateSignals(int index, double &emaFast[], double &emaSlow[]
       
       double rsiValue = rsi[0];
       
-      // Strong signals
+      // EMA crossover with RSI confirmation (primary scalping signal)
       if(emaCrossUp && rsiValue < InpRSIOversold)
       {
          buyScalp = true;
-         buyStrength += 2;
+         buyStrength += 3;  // Strong signal
       }
       
       if(emaCrossDown && rsiValue > InpRSIOverbought)
       {
          sellScalp = true;
-         sellStrength += 2;
+         sellStrength += 3;  // Strong signal
       }
       
-      // Momentum continuation
+      // Aggressive momentum continuation signals
       if(InpUseRSIMomentum)
       {
-         if(emaBullish && rsiValue > 50 && rsiValue < InpRSIOverbought)
+         // Bullish momentum: EMA trending up + RSI in bullish zone
+         if(emaBullish && rsiValue > 40 && rsiValue < 65)
          {
             buyScalp = true;
-            buyStrength += 1;
+            buyStrength += 2;
          }
          
-         if(emaBearish && rsiValue < 50 && rsiValue > InpRSIOversold)
+         // Bearish momentum: EMA trending down + RSI in bearish zone
+         if(emaBearish && rsiValue < 60 && rsiValue > 35)
          {
             sellScalp = true;
-            sellStrength += 1;
+            sellStrength += 2;
+         }
+         
+         // RSI extreme signals (aggressive oversold/overbought)
+         if(rsiValue < 20)  // Deep oversold
+         {
+            buyScalp = true;
+            buyStrength += 2;
+         }
+         if(rsiValue > 80)  // Deep overbought
+         {
+            sellScalp = true;
+            sellStrength += 2;
          }
       }
       
-      // ADX filter
+      // ADX trend filter (optional)
       if(InpUseADXFilter && data.handleAdx != INVALID_HANDLE)
       {
          double adxMain[], adxPlus[], adxMinus[];
@@ -1154,64 +1175,120 @@ ENUM_SIGNAL_TYPE GenerateSignals(int index, double &emaFast[], double &emaSlow[]
                else if(adxMinus[0] > adxPlus[0])
                   sellStrength += 1;
             }
+            else
+            {
+               // Low ADX = ranging market, reduce confidence
+               buyStrength -= 1;
+               sellStrength -= 1;
+            }
          }
       }
    }
    
-   // Breakout signals
+   // === BREAKOUT STRATEGY ===
    if(InpUseBreakout && highestHigh > 0 && lowestLow > 0)
    {
       double threshold = InpBreakoutThreshold * data.pipValue;
       
+      // Aggressive breakout detection
       if(ask > highestHigh + threshold)
       {
          buyBreak = true;
-         buyStrength += 2;
+         buyStrength += 3;
       }
       
       if(bid < lowestLow - threshold)
       {
          sellBreak = true;
-         sellStrength += 2;
+         sellStrength += 3;
+      }
+      
+      // Additional breakout confirmation: strong close above/below
+      MqlRates rates[];
+      if(CopyRates(data.name, InpTimeframe, 0, 2, rates) >= 2)
+      {
+         // Bullish continuation after breakout
+         if(ask > highestHigh && rates[0].close > rates[0].open)
+         {
+            buyStrength += 1;
+         }
+         // Bearish continuation after breakout
+         if(bid < lowestLow && rates[0].close < rates[0].open)
+         {
+            sellStrength += 1;
+         }
+      }
+      
+      // Volume confirmation (if enabled)
+      if(InpUseVolumeConfirmation && data.handleVolume != INVALID_HANDLE)
+      {
+         double volume[];
+         if(CopyBuffer(data.handleVolume, 0, 0, 3, volume) >= 3)
+         {
+            double avgVolume = (volume[1] + volume[2]) / 2.0;
+            if(volume[0] > avgVolume * InpVolumeMultiplier)
+            {
+               buyStrength += 1;
+               sellStrength += 1;
+            }
+         }
       }
    }
    
-   // Combine signals
+   // === AGGRESSIVE SIGNAL COMBINATION ===
+   // Combined strategy: both scalping and breakout agree = stronger signal
+   bool buySignalCombined = buyScalp && buyBreak;
+   bool sellSignalCombined = sellScalp && sellBreak;
+   
+   // Boost strength for combined signals (aggressive confirmation)
+   if(buySignalCombined)
+      buyStrength += 2;
+   if(sellSignalCombined)
+      sellStrength += 2;
+   
+   // Final signal determination
    bool buySignal = buyScalp || buyBreak;
    bool sellSignal = sellScalp || sellBreak;
    
-   // Check minimum signal strength
-   if(buySignal && buyStrength < InpMinSignalStrength)
+   // Minimum signal strength check (lower threshold for aggressive trading)
+   if(buySignal && buyStrength < MathMax(1, InpMinSignalStrength - 1))
       buySignal = false;
-   if(sellSignal && sellStrength < InpMinSignalStrength)
+   if(sellSignal && sellStrength < MathMax(1, InpMinSignalStrength - 1))
       sellSignal = false;
    
-   // Trend filter
+   // Trend filter (optional)
    if(InpUseTrendFilter)
    {
       ENUM_TREND_DIRECTION trend = GetHigherTimeframeTrend(data.name);
       if(trend == TREND_DOWN && buySignal)
+      {
          buySignal = false;
+         buyStrength = 0;
+      }
       if(trend == TREND_UP && sellSignal)
+      {
          sellSignal = false;
+         sellStrength = 0;
+      }
    }
    
    // Store signal
    if(buySignal && !sellSignal)
    {
-      data.lastSignal = (buyStrength >= 3) ? SIGNAL_BUY_STRONG : SIGNAL_BUY;
+      data.lastSignal = (buyStrength >= 4) ? SIGNAL_BUY_STRONG : SIGNAL_BUY;
       data.lastSignalTime = TimeCurrent();
       data.signalStrength = buyStrength;
       return data.lastSignal;
    }
    else if(sellSignal && !buySignal)
    {
-      data.lastSignal = (sellStrength >= 3) ? SIGNAL_SELL_STRONG : SIGNAL_SELL;
+      data.lastSignal = (sellStrength >= 4) ? SIGNAL_SELL_STRONG : SIGNAL_SELL;
       data.lastSignalTime = TimeCurrent();
       data.signalStrength = sellStrength;
       return data.lastSignal;
    }
    
+   // No clear signal
    data.lastSignal = SIGNAL_NONE;
    data.signalStrength = 0;
    return SIGNAL_NONE;
@@ -1350,7 +1427,7 @@ double NormalizeLot(int index, double lot)
 }
 
 //+------------------------------------------------------------------+
-//| Open position                                                    |
+//| Open position with enhanced SL/TP normalization and validation    |
 //+------------------------------------------------------------------+
 bool OpenPosition(int index, ENUM_ORDER_TYPE orderType, double lotSize)
 {
@@ -1359,63 +1436,114 @@ bool OpenPosition(int index, ENUM_ORDER_TYPE orderType, double lotSize)
    if(lotSize <= 0)
       return false;
    
+   // Validate lot size
+   lotSize = NormalizeLot(index, lotSize);
+   if(lotSize <= 0)
+      return false;
+   
    double sl = 0, tp = 0;
    double ask = SymbolInfoDouble(data.name, SYMBOL_ASK);
    double bid = SymbolInfoDouble(data.name, SYMBOL_BID);
    
-   // Calculate SL/TP
+   // Calculate SL/TP with enhanced normalization
    if(InpUseFixedSLTP)
    {
       double slDistance = InpStopLossPips * data.pipValue;
       double tpDistance = InpTakeProfitPips * data.pipValue;
       
+      // Get ATR for dynamic adjustment (optional enhancement)
+      double atrBuffer[];
+      if(CopyBuffer(data.handleAtr, 0, 0, 1, atrBuffer) > 0)
+      {
+         double atrValue = atrBuffer[0];
+         // Use maximum of fixed SL/TP or ATR-based levels
+         slDistance = MathMax(slDistance, atrValue * 2);
+         tpDistance = MathMax(tpDistance, atrValue * 1.5);
+      }
+      
       if(orderType == ORDER_TYPE_BUY)
       {
          sl = NormalizeDouble(ask - slDistance, data.digits);
          tp = NormalizeDouble(ask + tpDistance, data.digits);
+         
+         // Ensure SL is below current price
+         if(sl >= ask) sl = NormalizeDouble(ask - slDistance, data.digits);
+         if(tp <= ask) tp = NormalizeDouble(ask + tpDistance, data.digits);
       }
       else
       {
          sl = NormalizeDouble(bid + slDistance, data.digits);
          tp = NormalizeDouble(bid - tpDistance, data.digits);
+         
+         // Ensure SL is above current price
+         if(sl <= bid) sl = NormalizeDouble(bid + slDistance, data.digits);
+         if(tp >= bid) tp = NormalizeDouble(bid - tpDistance, data.digits);
       }
    }
    
-   // Set magic number
+   // Set magic number for this symbol
    g_trade.SetExpertMagicNumber((int)data.magicNumber);
    
-   // Open position
-   string comment = StringFormat("EA120_%s_S%d", 
+   // Enhanced order comment
+   string strategyInfo = "";
+   if(InpUseScalping && InpUseBreakout)
+      strategyInfo = "SCALP_BRK";
+   else if(InpUseScalping)
+      strategyInfo = "SCALP";
+   else if(InpUseBreakout)
+      strategyInfo = "BREAK";
+   
+   if(InpUseGrid) strategyInfo += "_GRID";
+   if(InpUseMartingale) strategyInfo += "_MG";
+   
+   string comment = StringFormat("EA120_%s_%s_%d", 
                      EnumToString(orderType), 
+                     strategyInfo,
                      (int)data.signalStrength);
    
    double price = (orderType == ORDER_TYPE_BUY) ? ask : bid;
    
-   if(!g_trade.PositionOpen(data.name, orderType, lotSize, price, sl, tp, comment))
+   // Open position with retry logic
+   int maxRetries = 2;
+   for(int attempt = 0; attempt < maxRetries; attempt++)
    {
-      Print("ERROR opening position on ", data.name, ": ", g_trade.ResultRetcodeDescription());
-      return false;
+      if(g_trade.PositionOpen(data.name, orderType, lotSize, price, sl, tp, comment))
+      {
+         // Update grid tracking
+         if(orderType == ORDER_TYPE_BUY)
+         {
+            data.lastGridPriceBuy = ask;
+         }
+         else
+         {
+            data.lastGridPriceSell = bid;
+         }
+         
+         Print("Position opened: ", data.name, " ", EnumToString(orderType), 
+               " Lot: ", lotSize, " SL: ", sl, " TP: ", tp, " Strategy: ", strategyInfo);
+         
+         data.totalTrades++;
+         return true;
+      }
+      else
+      {
+         Print("Position open attempt ", (attempt + 1), " failed: ", g_trade.ResultRetcodeDescription());
+         if(attempt < maxRetries - 1)
+         {
+            Sleep(100); // Brief pause before retry
+            ask = SymbolInfoDouble(data.name, SYMBOL_ASK);
+            bid = SymbolInfoDouble(data.name, SYMBOL_BID);
+            price = (orderType == ORDER_TYPE_BUY) ? ask : bid;
+         }
+      }
    }
    
-   // Update grid tracking
-   if(orderType == ORDER_TYPE_BUY)
-   {
-      data.lastGridPriceBuy = ask;
-   }
-   else
-   {
-      data.lastGridPriceSell = bid;
-   }
-   
-   Print("Position opened: ", data.name, " ", EnumToString(orderType), 
-         " Lot: ", lotSize, " SL: ", sl, " TP: ", tp);
-   
-   data.totalTrades++;
-   return true;
+   Print("ERROR: Failed to open position on ", data.name, " after ", maxRetries, " attempts");
+   return false;
 }
 
 //+------------------------------------------------------------------+
-//| Manage grid and martingale                                       |
+//| Manage grid and martingale - Enhanced aggressive implementation  |
 //+------------------------------------------------------------------+
 void ManageGridMartingale(int index, double ask, double bid)
 {
@@ -1426,35 +1554,182 @@ void ManageGridMartingale(int index, double ask, double bid)
    
    double gridStep = InpGridStepPips * data.pipValue;
    
-   // Check buy grid
+   // === AGGRESSIVE BUY GRID MANAGEMENT ===
    if(data.totalLotsBuy > 0 && data.martingaleLevelBuy < InpMaxMartingaleLevel)
    {
+      // Standard grid step check
       if(data.lastGridPriceBuy > 0 && bid <= data.lastGridPriceBuy - gridStep)
       {
          double newLot = CalculateLotSize(index, ORDER_TYPE_BUY, data.totalLotsBuy);
          
+         // Enhanced grid with equity recovery logic
+         if(InpMartingaleUseEquityRecovery)
+         {
+            double currentEquity = AccountInfoDouble(ACCOUNT_EQUITY);
+            double buyLossPct = (data.profitBuy < 0) ? 
+               MathAbs(data.profitBuy) / (currentEquity) * 100.0 : 0;
+            
+            if(buyLossPct > 2.0) // 2% equity drawdown on buy positions
+            {
+               newLot *= 1.3; // Aggressive recovery
+            }
+         }
+         
          if(OpenPosition(index, ORDER_TYPE_BUY, newLot))
          {
             data.martingaleLevelBuy++;
+            Print("BUY Grid Level ", data.martingaleLevelBuy, 
+                  " | Lot: ", newLot, " | Loss: ", data.profitBuy);
+         }
+      }
+      
+      // Additional aggressive grid entries based on ATR and loss
+      if(data.profitBuy < 0 && MathAbs(data.profitBuy) > (AccountInfoDouble(ACCOUNT_EQUITY) * 0.01))
+      {
+         // Add grid level if 1% equity loss on buy side
+         if(data.martingaleLevelBuy < InpMaxMartingaleLevel)
+         {
+            double recoveryLot = CalculateLotSize(index, ORDER_TYPE_BUY, data.totalLotsBuy) * 1.5;
+            if(OpenPosition(index, ORDER_TYPE_BUY, recoveryLot))
+            {
+               data.martingaleLevelBuy++;
+               Print("RECOVERY BUY Grid Level ", data.martingaleLevelBuy, 
+                     " | Lot: ", recoveryLot, " | Loss: ", data.profitBuy);
+            }
          }
       }
    }
    
-   // Check sell grid
+   // === AGGRESSIVE SELL GRID MANAGEMENT ===
    if(data.totalLotsSell > 0 && data.martingaleLevelSell < InpMaxMartingaleLevel)
    {
+      // Standard grid step check
       if(data.lastGridPriceSell > 0 && ask >= data.lastGridPriceSell + gridStep)
       {
          double newLot = CalculateLotSize(index, ORDER_TYPE_SELL, data.totalLotsSell);
          
+         // Enhanced grid with equity recovery logic
+         if(InpMartingaleUseEquityRecovery)
+         {
+            double currentEquity = AccountInfoDouble(ACCOUNT_EQUITY);
+            double sellLossPct = (data.profitSell < 0) ? 
+               MathAbs(data.profitSell) / (currentEquity) * 100.0 : 0;
+            
+            if(sellLossPct > 2.0) // 2% equity drawdown on sell positions
+            {
+               newLot *= 1.3; // Aggressive recovery
+            }
+         }
+         
          if(OpenPosition(index, ORDER_TYPE_SELL, newLot))
          {
             data.martingaleLevelSell++;
+            Print("SELL Grid Level ", data.martingaleLevelSell, 
+                  " | Lot: ", newLot, " | Loss: ", data.profitSell);
+         }
+      }
+      
+      // Additional aggressive grid entries based on ATR and loss
+      if(data.profitSell < 0 && MathAbs(data.profitSell) > (AccountInfoDouble(ACCOUNT_EQUITY) * 0.01))
+      {
+         // Add grid level if 1% equity loss on sell side
+         if(data.martingaleLevelSell < InpMaxMartingaleLevel)
+         {
+            double recoveryLot = CalculateLotSize(index, ORDER_TYPE_SELL, data.totalLotsSell) * 1.5;
+            if(OpenPosition(index, ORDER_TYPE_SELL, recoveryLot))
+            {
+               data.martingaleLevelSell++;
+               Print("RECOVERY SELL Grid Level ", data.martingaleLevelSell, 
+                     " | Lot: ", recoveryLot, " | Loss: ", data.profitSell);
+            }
          }
       }
    }
    
+   // === AGGRESSIVE GRID TRAILING STOP ===
+   if(InpGridTrailingStop && (data.martingaleLevelBuy > 0 || data.martingaleLevelSell > 0))
+   {
+      ManageGridTrailingStop(index);
+   }
+   
    data.UpdateGridStatus();
+}
+
+//+------------------------------------------------------------------+
+//| Manage grid trailing stop                                        |
+//+------------------------------------------------------------------+
+void ManageGridTrailingStop(int index)
+{
+   SymbolData &data = g_symbolData[index];
+   double currentBid = SymbolInfoDouble(data.name, SYMBOL_BID);
+   double currentAsk = SymbolInfoDouble(data.name, SYMBOL_ASK);
+   
+   // Calculate average prices for grid
+   if(data.totalLotsBuy > 0)
+   {
+      double gridProfit = data.profitBuy;
+      if(gridProfit > 0)
+      {
+         double trailDistance = InpTrailingStepPips * data.pipValue;
+         double currentLevel = currentBid - trailDistance;
+         
+         // Move all buy positions to breakeven + trailing
+         for(int i = PositionsTotal() - 1; i >= 0; i--)
+         {
+            ulong ticket = PositionGetTicket(i);
+            if(ticket <= 0) continue;
+            
+            if(PositionGetString(POSITION_SYMBOL) != data.name) continue;
+            if(PositionGetInteger(POSITION_MAGIC) != data.magicNumber) continue;
+            if(PositionGetInteger(POSITION_TYPE) != POSITION_TYPE_BUY) continue;
+            
+            double openPrice = PositionGetDouble(POSITION_PRICE_OPEN);
+            double currentSL = PositionGetDouble(POSITION_SL);
+            
+            if(currentBid > openPrice + trailDistance)
+            {
+               double newSL = NormalizeDouble(currentBid - trailDistance, data.digits);
+               if(newSL > currentSL)
+               {
+                  g_trade.PositionModify(ticket, newSL, PositionGetDouble(POSITION_TP));
+               }
+            }
+         }
+      }
+   }
+   
+   if(data.totalLotsSell > 0)
+   {
+      double gridProfit = data.profitSell;
+      if(gridProfit > 0)
+      {
+         double trailDistance = InpTrailingStepPips * data.pipValue;
+         double currentLevel = currentAsk + trailDistance;
+         
+         // Move all sell positions to breakeven + trailing
+         for(int i = PositionsTotal() - 1; i >= 0; i--)
+         {
+            ulong ticket = PositionGetTicket(i);
+            if(ticket <= 0) continue;
+            
+            if(PositionGetString(POSITION_SYMBOL) != data.name) continue;
+            if(PositionGetInteger(POSITION_MAGIC) != data.magicNumber) continue;
+            if(PositionGetInteger(POSITION_TYPE) != POSITION_TYPE_SELL) continue;
+            
+            double openPrice = PositionGetDouble(POSITION_PRICE_OPEN);
+            double currentSL = PositionGetDouble(POSITION_SL);
+            
+            if(currentAsk < openPrice - trailDistance)
+            {
+               double newSL = NormalizeDouble(currentAsk + trailDistance, data.digits);
+               if(newSL < currentSL || currentSL == 0)
+               {
+                  g_trade.PositionModify(ticket, newSL, PositionGetDouble(POSITION_TP));
+               }
+            }
+         }
+      }
+   }
 }
 
 //+------------------------------------------------------------------+
