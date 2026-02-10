@@ -1,317 +1,639 @@
-# EA_120_Logika - Comprehensive Multi-Strategy Trading System
+# EA_120_Logika - Enhanced Multi-Strategy Trading System
 
 ## Overview
 
-EA_120_Logika is an aggressive multi-symbol, multi-strategy Expert Advisor designed to trade 24/7 on the M6 (6-minute) timeframe. It combines four powerful trading strategies with advanced risk management to maximize profit potential in volatile markets.
+**Version:** 2.0  
+**Platform:** MetaTrader 5  
+**Language:** MQL5  
 
-## Table of Contents  
-1. [Strategy Components](#strategy-components)
-2. [Risk Management](#risk-management)
-3. [Multi-Symbol Trading](#multi-symbol-trading)
-4. [Configuration Parameters](#configuration-parameters)
-5. [Trading Logic Details](#trading-logic-details)
+EA_120_Logika is an advanced multi-symbol, multi-strategy Expert Advisor designed for 24/7 automated trading. This enhanced version includes sophisticated risk management, multiple trading sessions support, trailing stops, breakeven functionality, and comprehensive trade filtering mechanisms.
+
+## Table of Contents
+
+1. [Key Features](#key-features)
+2. [Strategy Components](#strategy-components)
+3. [Risk Management](#risk-management)
+4. [Multi-Symbol Trading](#multi-symbol-trading)
+5. [Configuration Parameters](#configuration-parameters)
+6. [Trading Logic Details](#trading-logic-details)
+7. [New in Version 2.0](#new-in-version-20)
+8. [Installation & Setup](#installation--setup)
+9. [Risk Warnings](#risk-warnings)
+10. [Performance Optimization](#performance-optimization)
+
+---
+
+## Key Features
+
+### Core Capabilities
+- ✅ **Multi-Symbol Trading** - Trade single symbol or scan all available symbols
+- ✅ **Multi-Timeframe Support** - Configurable timeframe (default M6)
+- ✅ **Four Combined Strategies** - Scalping, Breakout, Grid, Martingale
+- ✅ **Advanced Risk Management** - Drawdown limits, daily loss limits, position caps
+- ✅ **Trade Management** - Trailing stops, breakeven, partial close options
+- ✅ **Session Filtering** - Trade specific sessions (Asian, London, New York)
+- ✅ **Time Filters** - Weekend avoidance, news hour filtering
+- ✅ **Signal Quality** - Multi-level signal strength with trend confirmation
+- ✅ **Kelly Criterion** - Advanced position sizing option
+- ✅ **Comprehensive Statistics** - Per-symbol tracking and reporting
 
 ---
 
 ## Strategy Components
 
 ### 1. Scalping Strategy (EMA/RSI)
-The scalping component uses moving average crossovers combined with RSI momentum to identify short-term trading opportunities:
+**Precision short-term momentum trading with trend confirmation**
 
-- **Fast EMA (default: 5)**: Captures immediate price momentum
-- **Slow EMA (default: 20)**: Provides trend direction filter
-- **RSI (default: 14)**: Confirms oversold/overbought conditions
+| Component | Default | Description |
+|-----------|---------|-------------|
+| Fast EMA | 5 periods | Quick response to price changes |
+| Slow EMA | 20 periods | Trend direction filter |
+| RSI Period | 14 | Momentum oscillator |
+| RSI Oversold | 30 | Buy zone threshold |
+| RSI Overbought | 70 | Sell zone threshold |
 
 **Entry Logic:**
-- **Buy Signal**: Fast EMA crosses above Slow EMA + RSI < 30 (oversold) OR Fast EMA > Slow EMA + RSI between 50-70
-- **Sell Signal**: Fast EMA crosses below Slow EMA + RSI > 70 (overbought) OR Fast EMA < Slow EMA + RSI between 30-50
+
+**Strong Buy Signal (Strength +2):**
+- Fast EMA crosses above Slow EMA AND
+- RSI < 30 (oversold)
+
+**Momentum Buy (Strength +1):**
+- Fast EMA > Slow EMA AND
+- RSI between 50-70
+
+**Strong Sell Signal (Strength +2):**
+- Fast EMA crosses below Slow EMA AND
+- RSI > 70 (overbought)
+
+**Momentum Sell (Strength +1):**
+- Fast EMA < Slow EMA AND
+- RSI between 30-50
+
+**ADX Filter (Optional):**
+- ADX > 25 confirms trending market
+- DI+ > DI- confirms bullish trend
+- DI- > DI+ confirms bearish trend
 
 ### 2. Breakout Strategy
-Identifies price breakouts from recent ranges to capture momentum moves:
+**Range breakout with volume confirmation**
 
-- **Lookback Period (default: 20 bars)**: Analyzes recent high/low range
-- **Threshold (default: 5 pips)**: Minimum breakout distance to filter noise
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| Lookback | 20 bars | Analysis period for high/low |
+| Threshold | 5 pips | Minimum breakout distance |
+| Volume Filter | Optional | Confirms breakout strength |
 
 **Entry Logic:**
-- **Buy Signal**: Current Ask price breaks above the highest high of last 20 bars + threshold
-- **Sell Signal**: Current Bid price breaks below the lowest low of last 20 bars - threshold
+- **Buy**: Ask price > Highest High(20) + 5 pips
+- **Sell**: Bid price < Lowest Low(20) - 5 pips
 
 ### 3. Grid Trading
-Adds positions at regular price intervals to average entry prices:
+**Systematic position averaging at price intervals**
 
-- **Grid Step (default: 30 pips)**: Distance between grid levels
-- **Direction**: Opens additional positions in the same direction as existing trades
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| Grid Step | 30 pips | Distance between grid levels |
+| Max Levels | 10 | Maximum grid positions |
+| Trailing Stop | Optional | Protect grid positions |
 
-**Grid Logic:**
-- When price moves against a position by GridStep pips, open an additional position
-- Tracks separate grid levels for buy and sell positions
-- Limited by MaxPositionsPerSymbol parameter
+**Grid Behavior:**
+- Opens additional positions when price moves against existing trade by GridStep
+- Tracks separate grid levels for buy and sell directions
+- Resets when all positions in direction close
 
 ### 4. Martingale System
-Progressively increases position size after losses to recover drawdown:
+**Progressive position sizing for drawdown recovery**
 
-- **Martingale Factor (default: 1.5)**: Lot size multiplier for each new level
-- **Max Levels (default: 5)**: Maximum number of martingale layers
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| Multiplier | 1.5x | Lot size increase per level |
+| Max Levels | 5 | Maximum martingale depth |
+| Auto-Reset | Enabled | Reset on profitable close |
 
-**Martingale Logic:**
-- Each grid position uses lot size = previous total lots × MartingaleFactor
-- Resets to base lot size when starting fresh positions
-- Strictly controlled by MaxLot and MaxMartingaleLevel limits
+**Safety Features:**
+- Respects MaxLot per order limit
+- Respects MaxPositionsPerSymbol limit
+- Can reset when grid becomes profitable
 
 ---
 
 ## Risk Management
 
-### Drawdown Protection
-- **Max Drawdown %**: Stops all trading when equity drawdown exceeds specified percentage
-- **Real-time Monitoring**: Checks on every tick
-- **Alert System**: Generates alert when limit is reached
+### Multi-Layer Protection System
 
-### Position Limits
-- **Max Positions Per Symbol**: Prevents overexposure to single instrument
-- **Max Lot Size**: Caps individual position size regardless of martingale level
-- **Per-Symbol Tracking**: Independent position counting for each traded symbol
+#### 1. Drawdown Protection
+```
+Trigger: (Balance - Equity) / Balance × 100% ≥ MaxDrawdown%
+Action: Stop all trading, generate alert
+Default: 30%
+Range: 5% - 100%
+```
 
-### Stop Loss & Take Profit
-- **Fixed SL/TP in Pips**: Applied to every position
-- **Normalized Prices**: Automatically adjusts to symbol's price precision
-- **Grid-Compatible**: Each position has independent SL/TP levels
+#### 2. Daily Loss Limit
+```
+Trigger: Daily loss ≥ DailyLossLimit%
+Action: Stop trading until next day
+Reset: Automatic at midnight server time
+Default: 10%
+```
+
+#### 3. Position Limits
+| Limit | Default | Purpose |
+|-------|---------|---------|
+| Per Symbol | 10 | Prevent overexposure |
+| Total | 100 | Portfolio-wide cap |
+| Per Order | 10.0 | Single trade limit |
+
+#### 4. Account Protection
+- Minimum balance check
+- Margin level monitoring
+- Spread filtering (max 5 pips default)
+
+### Trade Management
+
+#### Fixed SL/TP Mode
+- **Stop Loss**: 50 pips (default)
+- **Take Profit**: 100 pips (default)
+- Applied to every position automatically
+
+#### Trailing Stop
+```
+Activation: Profit ≥ TrailingStart (50 pips)
+Adjustment: Trail price by TrailingStep (20 pips)
+Lock-in: Protects profits as price moves favorably
+```
+
+#### Breakeven
+```
+Trigger: Profit ≥ BreakevenTrigger (30 pips)
+Action: Move SL to entry + 2 pips
+Purpose: Risk-free trades
+```
+
+### Money Management Options
+
+| Method | Description |
+|--------|-------------|
+| Fixed Lot | Constant lot size per trade |
+| Risk Percent | Risk X% of balance per trade |
+| Kelly Criterion | Optimal sizing based on win rate |
+| Martingale | Increase after losses |
+
+**Kelly Criterion Formula (Half-Kelly):**
+```
+K% = (WinRate - (1 - WinRate) / (AvgWin/AvgLoss)) / 2
+Lot = BaseLot × K%
+```
 
 ---
 
 ## Multi-Symbol Trading
 
-### Symbol Selection
-Two modes available:
+### Symbol Selection Modes
 
-1. **Trade All Symbols (default: true)**
-   - Automatically scans all symbols in Market Watch
-   - Filters for tradeable symbols only
-   - Verifies sufficient M6 historical data
-   - Excludes disabled trading modes
+#### Mode 1: All Symbols (Recommended for diversification)
+```
+TradeAllSymbols = true
+- Automatically scans all Market Watch symbols
+- Filters for tradeable pairs only
+- Validates spread and data availability
+- Maximum 1000 symbols
+```
 
-2. **Single Symbol Mode**
-   - Set TradeAllSymbols = false
-   - Specify symbol in SingleSymbol parameter
-   - Falls back to chart symbol if empty
+#### Mode 2: Single Symbol
+```
+TradeAllSymbols = false
+SingleSymbol = "EURUSD"
+- Focused trading on one instrument
+- Falls back to chart symbol if empty
+```
 
-### Symbol Validation
-Each symbol must meet the following criteria:
-- Available in Market Watch
-- Trade mode is not DISABLED
-- Minimum 50 bars of M6 historical data available
-- Valid bid/ask quotes available
+### Symbol Validation Criteria
+1. ✓ Symbol exists in Market Watch
+2. ✓ Trade mode is not DISABLED
+3. ✓ Minimum 100 bars of historical data
+4. ✓ Current spread ≤ MaxSpread × 2
+5. ✓ Valid bid/ask prices
 
-### Per-Symbol Management
-- Independent indicator calculations (EMA, RSI, ATR) for each symbol
-- Separate grid tracking (lastGridPriceBuy, lastGridPriceSell)
-- Individual position counters
-- Isolated martingale level tracking
+### Per-Symbol Tracking
+Each symbol maintains independent:
+- Indicator handles (EMA, RSI, ATR, ADX)
+- Grid tracking variables
+- Position statistics
+- Magic number (base + index)
+- Signal history
+- Performance metrics
 
 ---
 
 ## Configuration Parameters
 
-### Multi-Symbol & Timeframe
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| TradeAllSymbols | true | Enable trading on all available symbols |
-| SingleSymbol | "" | Specific symbol (when TradeAllSymbols=false) |
-| EnforceM6 | true | Warning if not running on M6 timeframe |
+### General Settings
+| Parameter | Default | Range | Description |
+|-----------|---------|-------|-------------|
+| TradeAllSymbols | true | bool | Trade all available symbols |
+| SingleSymbol | "" | string | Specific symbol to trade |
+| Timeframe | PERIOD_M6 | ENUM | Trading timeframe |
+| EnforceTimeframe | true | bool | Warn if chart TF differs |
+| MagicNumberBase | 120000 | long | Base magic number |
+| Slippage | 10 | int | Max slippage in points |
 
 ### Risk Management
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| BaseLotSize | 0.01 | Starting lot size for new positions |
-| MaxLot | 10.0 | Maximum lot size per order |
-| MaxPositionsPerSymbol | 10 | Position limit per symbol |
-| MaxDrawdownPct | 30.0 | Maximum equity drawdown % before stopping |
-| StopLossPips | 50 | Stop loss distance in pips |
-| TakeProfitPips | 100 | Take profit distance in pips |
+| Parameter | Default | Range | Description |
+|-----------|---------|-------|-------------|
+| BaseLotSize | 0.01 | > 0 | Starting lot size |
+| MaxLot | 10.0 | ≥ BaseLot | Maximum per order |
+| MaxPositionsPerSymbol | 10 | > 0 | Symbol position limit |
+| TotalMaxPositions | 100 | ≥ PerSymbol | Portfolio limit |
+| MaxDrawdownPct | 30.0 | 5-100 | Equity drawdown limit |
+| DailyLossLimitPct | 10.0 | 0-100 | Daily loss limit |
+| MaxSpreadPips | 5.0 | > 0 | Max allowed spread |
+| MinAccountBalance | 100.0 | > 0 | Minimum to trade |
+
+### Stop Loss & Take Profit
+| Parameter | Default | Range | Description |
+|-----------|---------|-------|-------------|
+| UseFixedSLTP | true | bool | Enable fixed SL/TP |
+| StopLossPips | 50 | > 0 | Stop loss distance |
+| TakeProfitPips | 100 | > 0 | Take profit distance |
+| UseTrailingStop | false | bool | Enable trailing |
+| TrailingStartPips | 50 | > 0 | Trail activation |
+| TrailingStepPips | 20 | > 0 | Trail adjustment |
+| UseBreakEven | false | bool | Enable breakeven |
+| BreakEvenPips | 30 | > 0 | BE trigger level |
+
+### Money Management
+| Parameter | Default | Range | Description |
+|-----------|---------|-------|-------------|
+| UseRiskPercent | false | bool | Risk % sizing |
+| RiskPercent | 1.0 | > 0 | Risk per trade % |
+| UseKellyCriterion | false | bool | Kelly sizing |
 
 ### Scalping Strategy
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| UseScalping | true | Enable/disable scalping strategy |
-| EMA_Fast | 5 | Fast EMA period |
-| EMA_Slow | 20 | Slow EMA period |
-| RSI_Period | 14 | RSI calculation period |
-| RSI_Oversold | 30 | RSI oversold threshold |
-| RSI_Overbought | 70 | RSI overbought threshold |
+| Parameter | Default | Range | Description |
+|-----------|---------|-------|-------------|
+| UseScalping | true | bool | Enable strategy |
+| EMAFast | 5 | ≥ 1 | Fast EMA period |
+| EMASlow | 20 | > Fast | Slow EMA period |
+| RSIPeriod | 14 | ≥ 2 | RSI period |
+| RSIOversold | 30 | 0-100 | Oversold level |
+| RSIOverbought | 70 | 0-100 | Overbought level |
+| UseRSIMomentum | true | bool | RSI continuation |
+| UseADXFilter | false | bool | Trend filter |
+| ADXPeriod | 14 | ≥ 1 | ADX period |
+| ADXMinimum | 25.0 | > 0 | Minimum ADX |
 
 ### Breakout Strategy
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| UseBreakout | true | Enable/disable breakout strategy |
-| BreakoutLookback | 20 | Number of bars for high/low range |
-| BreakoutThreshold | 5.0 | Minimum breakout distance in pips |
+| Parameter | Default | Range | Description |
+|-----------|---------|-------|-------------|
+| UseBreakout | true | bool | Enable strategy |
+| BreakoutLookback | 20 | ≥ 5 | Lookback bars |
+| BreakoutThreshold | 5.0 | > 0 | Threshold pips |
+| UseVolumeConfirmation | false | bool | Volume filter |
+| VolumeMultiplier | 1.5 | > 0 | Volume threshold |
 
-### Grid & Martingale
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| UseGrid | true | Enable/disable grid trading |
-| GridStepPips | 30 | Distance between grid levels in pips |
-| UseMartingale | true | Enable/disable martingale |
-| MartingaleFactor | 1.5 | Lot multiplier for each level |
-| MaxMartingaleLevel | 5 | Maximum martingale layers |
+### Grid Trading
+| Parameter | Default | Range | Description |
+|-----------|---------|-------|-------------|
+| UseGrid | true | bool | Enable grid |
+| GridStepPips | 30 | ≥ 5 | Grid step |
+| MaxGridLevels | 10 | ≥ 1 | Max levels |
+| GridTrailingStop | false | bool | Trail grid |
 
-### Advanced
+### Martingale
+| Parameter | Default | Range | Description |
+|-----------|---------|-------|-------------|
+| UseMartingale | true | bool | Enable martingale |
+| MartingaleFactor | 1.5 | ≥ 1.0 | Lot multiplier |
+| MaxMartingaleLevel | 5 | ≥ 0 | Max depth |
+| ResetOnProfit | true | bool | Reset on win |
+| UseEquityRecovery | false | bool | Equity-based reset |
+
+### Trading Sessions
+| Parameter | Default | Options | Description |
+|-----------|---------|---------|-------------|
+| FilterBySession | false | bool | Enable filtering |
+| TradeSession | SESSION_ALL | ENUM | Primary session |
+| TradeAsian | true | bool | Asian session |
+| TradeLondon | true | bool | London session |
+| TradeNewYork | true | bool | NY session |
+
+### Time Filters
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| MagicNumberBase | 120000 | Magic number for EA identification |
-| Slippage | 10 | Maximum allowed slippage in points |
+| AvoidNewsHours | false | Skip high-impact periods |
+| NewsWindowMinutes | 30 | Buffer around news |
+| AvoidWeekend | true | No weekend trading |
+| FridayClosePositions | false | Close Friday evening |
+| FridayCloseHour | 20 | Close hour (server) |
+
+### Signal Filters
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| UseTrendFilter | false | HTF trend confirmation |
+| TrendTimeframe | PERIOD_H1 | Higher timeframe |
+| MinSignalStrength | 1 | Minimum 1-3 strength |
 
 ---
 
 ## Trading Logic Details
 
-### Initialization Phase
-1. Verify M6 timeframe (if EnforceM6 = true)
-2. Store initial account balance for drawdown calculation
-3. Configure CTrade object with magic number and slippage
-4. Build list of tradeable symbols
-5. Initialize indicators for each symbol:
-   - Fast EMA handle
-   - Slow EMA handle
-   - RSI handle
-   - ATR handle (for future enhancements)
-6. Initialize grid tracking variables per symbol
+### Initialization Sequence
+```
+1. Validate all input parameters
+2. Check timeframe enforcement
+3. Store initial balance/equity
+4. Configure CTrade object
+5. Build symbol list (scan/filter)
+6. Initialize indicators per symbol
+7. Set up timer (60-second interval)
+8. Log configuration summary
+```
 
 ### Per-Tick Execution Flow
-
 ```
 OnTick()
-├─ Check drawdown limit (equity vs balance)
-│  └─ If exceeded, stop all trading and alert
+├─ Check if trading enabled
+├─ Validate trading conditions
+│  ├─ Drawdown limit
+│  ├─ Daily loss limit
+│  ├─ Account balance
+│  ├─ Total positions
+│  ├─ Trading session
+│  └─ Weekend check
 │
-├─ For each tradeable symbol:
-│  ├─ Count current positions for symbol
-│  ├─ Get current Ask/Bid prices
-│  ├─ Copy indicator buffers (EMA fast/slow, RSI, ATR)
-│  ├─ Calculate breakout levels (highest high, lowest low)
+├─ FOR each symbol:
+│  ├─ Check spread filter
+│  ├─ Update position info
+│  ├─ Manage open positions (trail/BE)
+│  ├─ Check martingale reset
+│  ├─ Copy indicator buffers
+│  ├─ Calculate breakout levels
 │  │
 │  ├─ Generate signals:
-│  │  ├─ Scalping signals (EMA cross + RSI)
-│  │  ├─ Breakout signals (price vs range)
-│  │  └─ Combine with OR logic (aggressive entry)
+│  │  ├─ Scalping (EMA + RSI + ADX)
+│  │  ├─ Breakout (range + volume)
+│  │  ├─ Assign strength scores
+│  │  ├─ Apply trend filter
+│  │  └─ Combine with OR logic
 │  │
-│  ├─ If no positions exist:
-│  │  └─ Open new position on buy/sell signal
+│  ├─ IF no positions AND signal:
+│  │  └─ Calculate lot size
+│  │  └─ Open position
 │  │
-│  └─ If positions exist (< MaxPositionsPerSymbol):
-│     └─ Check grid/martingale conditions:
-│        ├─ Calculate grid step distance
-│        ├─ Compare current price vs last grid price
-│        └─ Open additional position with martingale lot size
+│  └─ IF positions exist AND < max:
+│     └─ Check grid/martingale
+│        ├─ Calculate grid distance
+│        ├─ Compare to last grid price
+│        └─ Open additional position
 ```
 
-### Signal Combination Logic
-Signals from different strategies are combined using **OR logic** for aggressive entry:
+### Signal Strength System
 
-```mql5
-buySignal = (scalpingBuySignal OR breakoutBuySignal)
-sellSignal = (scalpingSellSignal OR breakoutSellSignal)
+| Score | Description |
+|-------|-------------|
+| 1 | Basic momentum signal |
+| 2 | Strong crossover signal |
+| 3+ | Combined strategy confirmation |
+
+**Minimum Signal Strength Filter:**
+- Level 1: Any signal accepted
+- Level 2: Requires strong signal
+- Level 3: Requires confirmation
+
+### Lot Size Calculation Priority
+1. **Kelly Criterion** (if enabled and sufficient history)
+2. **Risk Percent** (if enabled)
+3. **Martingale Multiplier** (if applicable)
+4. **Base Lot Size** (default)
+
+### Position Management Priority
+1. Breakeven check
+2. Trailing stop adjustment
+3. Grid/martingale evaluation
+
+---
+
+## New in Version 2.0
+
+### Major Enhancements
+
+#### 1. **Enhanced Risk Management**
+- Daily loss limits with automatic reset
+- Per-symbol position tracking
+- Total position cap across all symbols
+- Spread-based trade filtering
+- Minimum account balance protection
+
+#### 2. **Advanced Trade Management**
+- Trailing stop with customizable step
+- Breakeven functionality
+- Partial close capability (framework)
+- Position modification tracking
+
+#### 3. **Session & Time Controls**
+- Trading session filtering (Asian/London/NY)
+- Configurable session hours
+- Weekend trading controls
+- Friday position closing option
+- News hour avoidance (framework)
+
+#### 4. **Signal Quality Improvements**
+- Multi-level signal strength (1-3+)
+- ADX trend filter for scalping
+- Volume confirmation for breakouts
+- Higher timeframe trend filter
+- Minimum signal strength threshold
+
+#### 5. **Money Management Options**
+- Kelly criterion position sizing
+- Risk percent per trade
+- Win/loss tracking per symbol
+- Performance statistics
+
+#### 6. **Code Architecture**
+- Structured SymbolData class
+- Comprehensive constants file
+- Error code definitions
+- Timer-based operations
+- Enhanced error handling
+
+#### 7. **User Experience**
+- Organized parameter groups
+- Detailed initialization logging
+- Per-symbol statistics
+- Final performance report
+- Comprehensive comments
+
+---
+
+## Installation & Setup
+
+### Step 1: File Placement
+```
+MetaTrader 5/
+├─ MQL5/
+│  ├─ Experts/
+│  │  └─ EA_120_Logika.mq5
+│  └─ Include/
+│     └─ EA_120_Logika/
+│        └─ Include/
+│           └─ Common/
+│              └─ Constants.mqh
 ```
 
-This means a position will open if **any** enabled strategy generates a signal.
+### Step 2: Compilation
+1. Open MetaEditor
+2. Load `EA_120_Logika.mq5`
+3. Press F7 to compile
+4. Fix any compilation errors
 
-### Position Management
+### Step 3: Chart Setup
+1. Open desired chart (recommended: M6)
+2. Attach EA to chart
+3. Configure parameters in dialog
+4. Enable "Allow DLL imports" if needed
+5. Enable "Allow live trading"
 
-**New Position Opening:**
-1. Check if position count = 0 for the symbol
-2. Generate combined signal from all enabled strategies
-3. Calculate normalized lot size (respecting SYMBOL_VOLUME_MIN/MAX/STEP)
-4. Calculate SL/TP based on pip values (adjusted for 3/5 digit brokers)
-5. Open position using CTrade.PositionOpen()
-6. Store grid reference price (lastGridPriceBuy or lastGridPriceSell)
-7. Reset martingale level counter to 0
-
-**Grid/Martingale Addition:**
-1. Check if existing positions < MaxPositionsPerSymbol
-2. Calculate current price movement from last grid price
-3. If movement >= GridStepPips (against position):
-   - Calculate new lot size:
-     - Grid only: Use BaseLotSize
-     - Martingale enabled: Use (total current lots × MartingaleFactor)
-   - Cap at MaxLot
-   - Open additional position with same direction
-   - Update lastGridPrice
-   - Increment martingale level
-4. Respect MaxMartingaleLevel limit
-
-### Price Normalization
-
-The EA handles different broker digit formats automatically:
-
-```mql5
-// Detect pip value
-pipValue = (digits == 5 || digits == 3) ? point × 10 : point
-
-// Calculate SL/TP
-sl_buy = ask - (StopLossPips × pipValue)
-tp_buy = ask + (TakeProfitPips × pipValue)
+### Step 4: Recommended Initial Settings
 ```
-
-This ensures consistent pip calculations for both 4-digit (0.0001) and 5-digit (0.00001) quote precision.
+BaseLotSize = 0.01
+MaxLot = 0.5
+MaxPositionsPerSymbol = 3
+MaxDrawdownPct = 15
+UseMartingale = false (initially)
+UseTrailingStop = true
+```
 
 ---
 
 ## Risk Warnings
 
-⚠️ **HIGH RISK TRADING SYSTEM**
+### ⚠️ HIGH RISK TRADING SYSTEM
 
-This EA uses aggressive strategies with the following risk factors:
+**This EA employs aggressive strategies that can result in significant losses:**
 
-1. **Martingale Risk**: Position sizes can grow exponentially, leading to large drawdowns
-2. **Grid Risk**: Multiple positions in same direction amplify losses during adverse moves
-3. **Multi-Symbol Risk**: Trading many symbols simultaneously increases margin requirements
-4. **High Frequency**: M6 timeframe generates frequent trades and commission costs
-5. **Drawdown Risk**: Default 30% drawdown limit allows significant account reduction
+1. **Martingale Risk**
+   - Position sizes grow exponentially
+   - Can consume entire account quickly
+   - Recommended: Start with UseMartingale = false
 
-**Recommendations:**
-- Start with demo account testing
-- Use conservative parameters initially
-- Monitor margin levels closely
-- Reduce MaxPositionsPerSymbol and MaxMartingaleLevel for lower risk
-- Consider disabling martingale (UseMartingale = false) for safer operation
-- Test with limited symbol count before enabling TradeAllSymbols
+2. **Grid Risk**
+   - Multiple positions amplify losses
+   - Requires significant margin
+   - Monitor free margin closely
+
+3. **Multi-Symbol Risk**
+   - Simultaneous trading increases exposure
+   - Correlated pairs can move together
+   - Spread costs multiply with symbols
+
+4. **High-Frequency Risk**
+   - M6 timeframe generates many trades
+   - Commission costs accumulate
+   - Slippage impact increases
+
+### Risk Mitigation Recommendations
+
+| Risk Level | Settings |
+|------------|----------|
+| Conservative | BaseLot=0.01, MaxLot=0.1, MaxPos=3, Martingale=false, Grid=false |
+| Moderate | BaseLot=0.01, MaxLot=0.5, MaxPos=5, Martingale=false, Grid=true |
+| Aggressive | BaseLot=0.02, MaxLot=2.0, MaxPos=10, Martingale=true, Grid=true |
+
+**Essential Practices:**
+- ✅ Start with demo account for 3+ months
+- ✅ Use VPS for 24/7 operation
+- ✅ Monitor daily/weekly performance
+- ✅ Set conservative initial parameters
+- ✅ Keep sufficient free margin (50%+)
+- ✅ Have stop-loss on broker side
+- ✅ Regular withdrawal of profits
+- ✅ Disable before major news events
 
 ---
 
-## Technical Implementation Notes
+## Performance Optimization
 
-### MQL5 Features Used
-- **CTrade Class**: Modern trade execution with result checking
-- **Multiple Indicators**: Simultaneous indicator handles per symbol
-- **Position Management**: POSITION_* functions for tracking open trades
-- **Symbol Information**: Dynamic symbol property queries
-- **Array Management**: Dynamic resizing for symbol lists and data structures
+### Recommended VPS Specifications
+- RAM: 2GB minimum, 4GB recommended
+- CPU: 2+ cores
+- OS: Windows Server 2019/2022
+- Latency: < 10ms to broker
 
-### Performance Considerations
-- Indicator calculations cached using handles (efficient buffer copying)
-- Per-symbol data structure avoids redundant lookups
-- Position counting optimized with single loop
-- Early returns for invalid data prevent unnecessary calculations
+### Broker Requirements
+- ECN/STP execution
+- Low spreads (< 2 pips majors)
+- No dealing desk intervention
+- Supports ORDER_FILLING_FOK
+- Minimum 1:100 leverage
 
-### Compatibility
-- **MT5 Build**: Requires recent MT5 build supporting CTrade class
-- **Broker Requirements**: ECN/STP brokers recommended (supports ORDER_FILLING_FOK)
-- **Symbol Types**: Works with Forex, CFDs, and other instruments with valid M6 data
-- **Timeframe**: Designed for M6 but will execute on any timeframe (warning displayed)
+### Symbol Recommendations
+**High Priority (low spread, high liquidity):**
+- EURUSD, GBPUSD, USDJPY
+- XAUUSD (if spread allows)
+
+**Medium Priority:**
+- AUDUSD, USDCAD, USDCHF
+- EURGBP, EURJPY
+
+**Avoid:**
+- Exotic pairs (high spread)
+- Low volume CFDs
+- Custom/synthetic indices
+
+### Optimal Parameters by Account Size
+
+| Account | BaseLot | MaxLot | MaxPos | MaxSymbols |
+|---------|---------|--------|--------|------------|
+| $500 | 0.01 | 0.05 | 3 | 5 |
+| $1,000 | 0.01 | 0.1 | 5 | 10 |
+| $5,000 | 0.02 | 0.5 | 7 | 20 |
+| $10,000 | 0.05 | 1.0 | 10 | 50 |
+| $50,000+ | 0.1 | 5.0 | 10 | 100 |
 
 ---
 
-## Conclusion
+## Support & Troubleshooting
 
-EA_120_Logika implements a sophisticated multi-strategy trading system that combines short-term scalping with breakout detection, position averaging via grid trading, and loss recovery through martingale. The aggressive parameter defaults are designed for experienced traders seeking maximum profit potential with acceptance of substantial risk.
+### Common Issues
 
-The multi-symbol capability allows portfolio diversification and 24/7 trading across different markets and sessions. Comprehensive risk management features (drawdown limits, position caps, fixed SL/TP) provide essential safeguards against catastrophic losses.
+**"Insufficient data" error:**
+- Load more historical data
+- Reduce BreakoutLookback parameter
 
-**Success with this EA requires:**
-- Thorough testing and parameter optimization
-- Understanding of martingale and grid risks
-- Adequate account capitalization
-- Active monitoring during live operation
-- Disciplined risk management practices
+**Orders not opening:**
+- Check MaxSpreadPips setting
+- Verify trading session hours
+- Check MaxPositionsPerSymbol
 
-For support and updates, refer to the source code comments and parameter descriptions in the EA interface.
+**High drawdown:**
+- Reduce BaseLotSize
+- Disable Martingale
+- Enable UseTrailingStop
+
+**EA not trading:**
+- Verify AutoTrading is enabled
+- Check timeframe enforcement
+- Review trading session settings
+
+### Debug Information
+Enable detailed logging in MT5:
+```
+Tools → Options → Expert Advisors → 
+☑ Enable debug logging
+```
+
+---
+
+## Legal Disclaimer
+
+This software is provided "AS IS" without warranties. Trading forex involves substantial risk of loss. Past performance does not guarantee future results. The authors assume no liability for trading losses incurred using this EA.
+
+**Use at your own risk.**
+
+---
+
+*Documentation Version 2.0*  
+*Last Updated: 2024*
