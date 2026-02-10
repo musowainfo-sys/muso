@@ -1,14 +1,8 @@
-// Constants and Enums for the EA System
+// Define all constants and enums
+#define MAX_TREND_LENGTH 100
 
-// Define constant values
-const int MAX_USERS = 100;
-const double LOT_SIZE = 0.1;
-const string EA_NAME = "MyExpertAdvisor";
-
-// Enum for Order Types
-enum OrderType { BUY, SELL, CLOSE };
-
-// Enum for Trade Statuses
-enum TradeStatus { OPEN, CLOSED, PENDING };
-
-// Add more constants and enums as needed
+enum TrendDirection { 
+    UP,
+    DOWN,
+    SIDEWAYS
+};
