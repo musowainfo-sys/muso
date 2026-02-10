@@ -365,6 +365,15 @@ void OnDeinit(const int reason)
 //+------------------------------------------------------------------+
 void OnTick()
 {
+   static datetime lastProcessingTime = 0;
+   datetime currentTime = TimeCurrent();
+   
+   // Only process if new tick received (not just timer event)
+   if(currentTime == lastProcessingTime)
+      return;
+   
+   lastProcessingTime = currentTime;
+   
    // Check if trading is allowed
    if(!g_tradingEnabled)
       return;
@@ -505,6 +514,15 @@ bool ValidateInputs()
 //+------------------------------------------------------------------+
 bool CheckTradingConditions()
 {
+   static datetime lastCheckTime = 0;
+   datetime currentTime = TimeCurrent();
+   
+   // Only perform expensive checks periodically (every 30 seconds)
+   if(currentTime - lastCheckTime < 30)
+      return g_tradingEnabled && !g_drawdownLimitReached && !g_dailyLimitReached;
+   
+   lastCheckTime = currentTime;
+   
    // Check drawdown limit
    if(!g_drawdownLimitReached && !CheckDrawdownLimit())
    {
@@ -1135,6 +1153,10 @@ void ProcessSymbol(int index)
 {
    string symbol = g_symbolList[index];
    SymbolData &data = g_symbolData[index];
+   
+   // Check position limits early to avoid unnecessary calculations
+   if(GetPositionsCountForSymbol(symbol) >= InpMaxPositionsPerSymbol)
+      return;
    
    // Check spread
    if(!CheckSpread(symbol))

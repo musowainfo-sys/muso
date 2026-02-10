@@ -1,36 +1,33 @@
-# MQL5 Compiled Files
+```
+# Compiled and build artifacts
+*.mq5
 *.ex5
+*.mq4
 *.ex4
+*.obj
+*.o
+*.pyc
+__pycache__/
 
-# MetaEditor Logs
+# Dependencies
+node_modules/
+.venv/
+venv/
+.env
+.env.local
+.env.*
+
+# Logs and temp files
 *.log
+*.tmp
+*.swp
 
-# MetaTrader Files
-*.hst
-*.fxt
-*.set
-*.tpl
-*.chr
-
-# Backtest Reports
-*.htm
-*.html
-tester/
-
-# MetaTrader Logs
-MQL5/Logs/
-MQL5/Files/
-
-# IDE and Editor Files
+# Editors
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
-.DS_Store
-Thumbs.db
 
-# Temporary Files
-*.tmp
-*.bak
-*.old
+# Build and distribution
+dist/
+build/
+target/
+```
