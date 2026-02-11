@@ -24,13 +24,7 @@
 #include "Include\EA_120_Logika\EA120_Signals.mqh"
 #include "Include\EA_120_Logika\EA120_Trading.mqh"
 
-//+------------------------------------------------------------------+
-//| Application Constants                                            |
-//+------------------------------------------------------------------+
-#define EA_NAME         "EA_120_Logika"
-#define EA_VERSION      "2.02"
-#define EA_AUTHOR       "AutoTrader"
-#define EA_LINK         ""
+
 
 //+------------------------------------------------------------------+
 //| Default Values                                                   |
@@ -87,6 +81,7 @@ enum ENUM_TRADING_SESSION
    SESSION_ASIAN,      // Asian session (Tokyo)
    SESSION_LONDON,     // London session
    SESSION_NEWYORK,    // New York session
+   SESSION_LONDON_NY,  // London + New York overlap
    SESSION_ALL         // All sessions (24/7)
 };
 
@@ -272,6 +267,7 @@ string SessionToString(ENUM_TRADING_SESSION session)
       case SESSION_ASIAN:   return "Asian";
       case SESSION_LONDON:  return "London";
       case SESSION_NEWYORK: return "New York";
+      case SESSION_LONDON_NY: return "London+NY";
       case SESSION_ALL:     return "All Sessions";
       default:              return "Unknown";
    }
@@ -945,7 +941,7 @@ double AnalyzeMarketSentiment(int index)
    SymbolData &data = g_symbolData[index];
    
    // Sentiment based on multiple indicators
-   double rsi[], emaFast[], atr[];
+   double rsi[], emaFast[], emaSlow[], atr[];
    double sentiment = 0;
    int signalCount = 0;
    
