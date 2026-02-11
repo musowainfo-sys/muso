@@ -849,6 +849,15 @@ bool CheckTradingConditions()
       return false;
    }
    
+   // Check if account is in margin call situation
+   double marginLevel = AccountInfoDouble(ACCOUNT_MARGIN_LEVEL);
+   if(marginLevel > 0 && marginLevel < 100.0)  // Below 100% margin level
+   {
+      Print("Margin level too low: ", marginLevel, "%. Trading suspended.");
+      g_tradingEnabled = false;
+      return false;
+   }
+   
    // Check trading session
    if(InpFilterBySession && !IsTradeSessionAllowed())
    {
@@ -2189,18 +2198,58 @@ bool OpenPosition(int index, ENUM_ORDER_TYPE orderType, double lotSize)
          sl = NormalizeDouble(ask - slDistance, data.digits);
          tp = NormalizeDouble(ask + tpDistance, data.digits);
          
-         // Ensure SL is below current price
-         if(sl >= ask) sl = NormalizeDouble(ask - slDistance, data.digits);
-         if(tp <= ask) tp = NormalizeDouble(ask + tpDistance, data.digits);
+         // Ensure SL is below current price and not too close
+         if(sl >= ask) 
+         {
+            sl = NormalizeDouble(ask - slDistance, data.digits);
+            // Safety check: ensure SL is not equal to price
+            if(sl >= ask) sl = NormalizeDouble(ask - (slDistance * 2), data.digits);
+         }
+         if(tp <= ask) 
+         {
+            tp = NormalizeDouble(ask + tpDistance, data.digits);
+            // Safety check: ensure TP is not equal to price
+            if(tp <= ask) tp = NormalizeDouble(ask + (tpDistance * 2), data.digits);
+         }
       }
       else
       {
          sl = NormalizeDouble(bid + slDistance, data.digits);
          tp = NormalizeDouble(bid - tpDistance, data.digits);
          
-         // Ensure SL is above current price
-         if(sl <= bid) sl = NormalizeDouble(bid + slDistance, data.digits);
-         if(tp >= bid) tp = NormalizeDouble(bid - tpDistance, data.digits);
+         // Ensure SL is above current price and not too close
+         if(sl <= bid) 
+         {
+            sl = NormalizeDouble(bid + slDistance, data.digits);
+            // Safety check: ensure SL is not equal to price
+            if(sl <= bid) sl = NormalizeDouble(bid + (slDistance * 2), data.digits);
+         }
+         if(tp >= bid) 
+         {
+            tp = NormalizeDouble(bid - tpDistance, data.digits);
+            // Safety check: ensure TP is not equal to price
+            if(tp >= bid) tp = NormalizeDouble(bid - (tpDistance * 2), data.digits);
+         }
+      }
+      
+      // Validate SL/TP against current price to prevent invalid orders
+      if(orderType == ORDER_TYPE_BUY)
+      {
+         if(sl >= ask || tp <= ask)
+         {
+            Print("SL/TP validation failed for BUY order on ", data.name, " - disabling SL/TP");
+            sl = 0;
+            tp = 0;
+         }
+      }
+      else
+      {
+         if(sl <= bid || tp >= bid)
+         {
+            Print("SL/TP validation failed for SELL order on ", data.name, " - disabling SL/TP");
+            sl = 0;
+            tp = 0;
+         }
       }
    }
    
@@ -2224,12 +2273,18 @@ bool OpenPosition(int index, ENUM_ORDER_TYPE orderType, double lotSize)
                      strategyInfo,
                      (int)data.signalStrength);
    
+   // Add safety check for slippage
+   double deviation = InpSlippage;
+   if(deviation <= 0) deviation = 10;  // Default to 10 if slippage is invalid
+   
    double price = (orderType == ORDER_TYPE_BUY) ? ask : bid;
    
    // Open position with retry logic
    int maxRetries = 2;
    for(int attempt = 0; attempt < maxRetries; attempt++)
    {
+      g_trade.SetDeviationInPoints((int)deviation);  // Use the validated deviation
+      
       if(g_trade.PositionOpen(data.name, orderType, lotSize, price, sl, tp, comment))
       {
          // Update grid tracking
