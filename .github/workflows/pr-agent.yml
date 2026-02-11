@@ -1,0 +1,93 @@
+name: PR Autonomous Agent
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: pr-agent
+  cancel-in-progress: false
+
+jobs:
+  pr-agent:
+    if: >
+      github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/') &&
+      github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.issue.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/caches
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*') }}
+
+      - name: Parse Command
+        id: parse
+        run: node .github/scripts/command-parser.js "${{ github.event.comment.body }}"
+
+      - name: Build
+        if: steps.parse.outputs.build == 'true'
+        run: ./gradlew build
+
+      - name: Lint
+        if: steps.parse.outputs.lint == 'true'
+        run: ./gradlew lint
+
+      - name: Lint Fix
+        if: steps.parse.outputs.fix == 'true'
+        run: ./gradlew lintFix || true
+
+      - name: Spotless Refactor
+        if: steps.parse.outputs.refactor == 'true'
+        run: ./gradlew spotlessApply || true
+
+      - name: AI Refactor
+        if: steps.parse.outputs.ai == 'true'
+        run: node .github/scripts/ai-refactor.js
+
+      - name: Commit Changes
+        run: |
+          if [[ -n $(git status --porcelain) ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "bot@users.noreply.github.com"
+            git add .
+            git commit -m "auto: bot update"
+            git push
+          fi
+
+      - name: Auto Merge
+        if: steps.parse.outputs.merge == 'true'
+        run: |
+          gh pr merge ${{ github.event.issue.number }} --squash --auto
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Comment Feedback
+        run: |
+          gh pr comment ${{ github.event.issue.number }} \
+          --body "Command executed successfully."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
