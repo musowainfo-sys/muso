@@ -1,36 +1,63 @@
 ```
 # Compiled and build artifacts
-*.mqh.gch
-*.mq5.ex5
-*.ex4
+*.mqh
+*.mq5
 *.ex5
+*.ex4
+*.gsc
 *.gch
+*.hcc
 
-# Dependencies and build directories
-lib/
-Libraries/
-include/
-Include/
-
-# Logs and temp files
+# MetaTrader specific
+Tester/
+Profiles/
+MQL5/
+MQL4/
+Data/
+Logs/
 *.log
-*.tmp
-*.temp
 
-# Editor/IDE files
+# Dependencies and cache
+.cache/
+*.cache
+bin/
+obj/
+
+# Environment
+.env
+.env.local
+.env.*
+
+# Editors and IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
-# MT4/MT5 specific
-Tester/
-tester/
-Logs/
-logs/
-*.hst
-*.fxt
-*.csv
-*.htm
-*.html
+# System files
+.DS_Store
+Thumbs.db
+
+# Coverage and testing
+coverage/
+htmlcov/
+.coverage
+*.coverage
+
+# Compressed files
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.Z
+*.lz
+*.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
 ```
