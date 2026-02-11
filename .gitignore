@@ -1,39 +1,39 @@
 ```
-# Logs and temp files
-*.log
-*.tmp
-*.swp
+# Compiled and binary files
+*.mqh
+*.mq5
+*.ex5
+*.ex4
 
-# Environment
+# Build artifacts
+*.hst
+*.fxt
+*.set
+*.log
+
+# MT4/MT5 data files
+tester/
+history/
+logs/
+
+# Dependencies and temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Environment specific
 .env
 .env.local
-.env.*
+*.env.*
 
-# Editors
+# IDE files
 .vscode/
 .idea/
+*.swp
+*.swo
 
-# Dependencies
-node_modules/
-venv/
-.venv/
-__pycache__/
-.mypy_cache/
-.pytest_cache/
-dist/
-build/
-target/
-.gradle/
-
-# System files
+# OS files
 .DS_Store
 Thumbs.db
-
-# Coverage
-coverage/
-htmlcov/
-.coverage
-
-# Original rules preserved
-*.log
 ```
