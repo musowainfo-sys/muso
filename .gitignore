@@ -1,4 +1,36 @@
 ```
-# CI/CD
-.github/
+# Compiled and build artifacts
+*.mqh.gch
+*.mq5.ex5
+*.ex4
+*.ex5
+*.gch
+
+# Dependencies and build directories
+lib/
+Libraries/
+include/
+Include/
+
+# Logs and temp files
+*.log
+*.tmp
+*.temp
+
+# Editor/IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# MT4/MT5 specific
+Tester/
+tester/
+Logs/
+logs/
+*.hst
+*.fxt
+*.csv
+*.htm
+*.html
 ```
