@@ -369,7 +369,7 @@ input bool     InpMartingaleUseEquityRecovery = false; // Disable equity-based r
 //=== Trading Hours & Filters ===
 input group "=== Trading Sessions ==="
 input bool     InpFilterBySession = true;        // Filter by trading session (enabled for safety)
-input ENUM_TRADING_SESSION InpTradeSession = SESSION_LONDON_NY; // Trading session (default to active sessions)
+input ENUM_TRADING_SESSION InpTradeSession = SESSION_ALL; // Trading session (default to active sessions)
 input bool     InpTradeAsian = false;            // Don't trade Asian session by default
 input bool     InpTradeLondon = true;            // Trade London session
 input bool     InpTradeNewYork = true;           // Trade New York session

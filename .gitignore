@@ -1,36 +1,49 @@
 ```
-# Compiled and build artifacts
-*.mqh.gch
-*.mq5.ex5
-*.ex4
+# Compiled and binary files
+*.mq5o
 *.ex5
-*.gch
-
-# Dependencies and build directories
-lib/
-Libraries/
-include/
-Include/
+*.dll
+*.so
+*.dylib
 
 # Logs and temp files
 *.log
 *.tmp
 *.temp
 
-# Editor/IDE files
+# Environment and cache
+.env
+.env.local
+*.env.*
+.cache/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Build and distribution
+build/
+dist/
+target/
+out/
+
+# Dependencies
+node_modules/
+vendor/
+deps/
+
+# Editors
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# MT4/MT5 specific
-Tester/
-tester/
-Logs/
-logs/
-*.hst
-*.fxt
-*.csv
-*.htm
-*.html
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
 ```
