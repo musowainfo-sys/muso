@@ -8,7 +8,7 @@
 #property version   "1.00"
 #property strict
 
-#include <antekov/Advisor/Experts/Optimization.mqh>
+#include "..\Include\EA\ExpertAdvisor.mqh"
 
 //--- Input parameters
 input string         symbol_ = "GBPUSD";
