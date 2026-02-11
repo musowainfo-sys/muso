@@ -1,39 +1,17 @@
 ```
-# Compiled and binary files
-*.mqh
-*.mq5
-*.ex5
-*.ex4
+# Dependencies
+node_modules/
 
-# Build artifacts
-*.hst
-*.fxt
-*.set
+# Editors
+.vscode/
+
+# Logs and temp files
 *.log
-
-# MT4/MT5 data files
-tester/
-history/
-logs/
-
-# Dependencies and temporary files
 *.tmp
-*.temp
-*.bak
-*.backup
+*.swp
 
-# Environment specific
+# Environment
 .env
 .env.local
 *.env.*
-
-# IDE files
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS files
-.DS_Store
-Thumbs.db
 ```
