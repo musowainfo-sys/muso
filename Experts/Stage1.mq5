@@ -11,7 +11,7 @@
 #define __NAME__ "SimpleCandles" + MQLInfoString(MQL_PROGRAM_NAME)
 
 #include "Strategies/SimpleCandlesStrategy.mqh"
-#include <antekov/Advisor/Experts/Stage1.mqh>
+#include "..\Include\EA\ExpertAdvisor.mqh"
 
 //--- Input parameters
 sinput string     symbol_ = "";

@@ -7,7 +7,7 @@
 #property link      "https://antekov.com"
 #property version   "1.00"
 
-#include <antekov/Advisor/Virtual/VirtualStrategy.mqh>
+#include "..\Include\EA\VirtualStrategy.mqh"
 
 //+------------------------------------------------------------------+
 //|                                      Simple Candles Strategy   |
