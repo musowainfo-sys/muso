@@ -32,7 +32,7 @@
 //| Risk Management Constants                                        |
 //+------------------------------------------------------------------+
 #define MAX_DRAWDOWN_MINIMUM          5.0
-#define MAX_DRADWON_MAXIMUM           100.0
+#define MAX_DRAWDOWN_MAXIMUM           100.0
 #define MAX_LOT_MINIMUM               0.01
 #define MAX_LOT_ABSOLUTE              1000.0
 #define MIN_GRID_STEP_PIPS            5.0
