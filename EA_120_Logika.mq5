@@ -15,6 +15,14 @@
 
 #include <Trade\Trade.mqh>
 #include <Arrays\ArrayLong.mqh>
+#include "Include\EA_120_Logika\EA120_Constants.mqh"
+#include "Include\EA_120_Logika\EA120_Inputs.mqh"
+#include "Include\EA_120_Logika\EA120_Structs.mqh"
+#include "Include\EA_120_Logika\EA120_Utils.mqh"
+#include "Include\EA_120_Logika\EA120_Filters.mqh"
+#include "Include\EA_120_Logika\EA120_Indicators.mqh"
+#include "Include\EA_120_Logika\EA120_Signals.mqh"
+#include "Include\EA_120_Logika\EA120_Trading.mqh"
 
 //+------------------------------------------------------------------+
 //| Application Constants                                            |
